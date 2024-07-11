@@ -1,0 +1,157 @@
+{
+  "header": {
+    "comment": "eric project file for project icosPrep",
+    "copyright": "Copyright (C) 2024 Arndt Meier, koala.oso@gmail.com",
+    "saved": "2024-07-11, 11:34:57"
+  },
+  "project": {
+    "AUTHOR": "Arndt Meier",
+    "CHECKERSPARMS": {},
+    "DESCRIPTION": "icosPrep is a package for scientific use that discovers data on the icos.eu carbon portal and prepares it for use in an atmospheric inversion model (e.g. LUMIA). \nProvides a graphical user interface for setting up the configuration file for LUMIA. This includes an interface to the ICOS carbon portal and the\ninteractive selection of observational data from the ICOS carbon portal icos.eu \nicosPrep has been developped further from lumiaGUI and the lumiaDA branch of LUMIA (https://github.com/lumia-dev/lumia/tree/LumiaDA)\nproject. Its aim is to prepare all input data in an offline archive though with full documentatation of all persistent identifiers such that the data\ncould be re-created at any moment",
+    "DOCSTRING": "",
+    "DOCUMENTATIONPARMS": {},
+    "EMAIL": "koala.oso@gmail.com",
+    "EMBEDDED_VENV": false,
+    "EOL": 0,
+    "FILETYPES": {
+      "*.cfg": "OTHERS",
+      "*.epj": "OTHERS",
+      "*.ini": "OTHERS",
+      "*.json": "OTHERS",
+      "*.md": "OTHERS",
+      "*.py": "SOURCES",
+      "*.py3": "SOURCES",
+      "*.pyw": "SOURCES",
+      "*.pyw3": "SOURCES",
+      "*.rst": "OTHERS",
+      "*.toml": "OTHERS",
+      "*.txt": "OTHERS",
+      "*.yaml": "OTHERS",
+      "*.yml": "OTHERS",
+      "GNUmakefile": "OTHERS",
+      "Makefile": "OTHERS",
+      "README": "OTHERS",
+      "README.*": "OTHERS",
+      "makefile": "OTHERS"
+    },
+    "FORMS": [],
+    "HASH": "6f688e06049a7c6a0eab14e5da3127168c54038c",
+    "IDLPARAMS": {
+      "DefinedNames": [],
+      "IncludeDirs": [],
+      "UndefinedNames": []
+    },
+    "LEXERASSOCS": {},
+    "LICENSE": "CC0 1.0 Universal (CC0 1.0) Public Domain Dedication",
+    "MAINSCRIPT": "src/icosPrep.py",
+    "MAKEPARAMS": {
+      "MakeEnabled": false,
+      "MakeExecutable": "",
+      "MakeFile": "",
+      "MakeParameters": "",
+      "MakeTarget": "",
+      "MakeTestOnly": true
+    },
+    "MIXEDLANGUAGE": false,
+    "OTHERS": [
+      "LICENSE.md",
+      "README.md",
+      "doc/build-icosPrep-env.txt",
+      "doc/lumia-config-v6-tr-co2.yml",
+      "doc/min-requirements-icosPrep.txt",
+      "setup.cfg",
+      "src/dataHunting/doc/dataHunter-dark-theme.json"
+    ],
+    "OTHERTOOLSPARMS": {},
+    "PACKAGERSPARMS": {},
+    "PROGLANGUAGE": "Python3",
+    "PROJECTTYPE": "Console",
+    "PROJECTTYPESPECIFICDATA": {},
+    "RCCPARAMS": {
+      "CompressLevel": 0,
+      "CompressionDisable": false,
+      "CompressionThreshold": 70,
+      "PathPrefix": ""
+    },
+    "RESOURCES": [],
+    "SOURCES": [
+      "__init__.py",
+      "src/__init__.py",
+      "src/auxiliary/outputEraser.py",
+      "src/dataHunting/__init__.py",
+      "src/dataHunting/dataHunter.py",
+      "src/dataHunting/dataHunterNotebook.py",
+      "src/dataHunting/guiElementsTk.py",
+      "src/dataHunting/guiElements_ipyWdg.py",
+      "src/dataHunting/myCarbonPortalTools.py",
+      "src/dataHunting/queryCarbonPortal.py",
+      "src/dataPrep/getHandleFromDoi.py",
+      "src/dataPrep/prepData.py",
+      "src/dataPrep/readLv3NcFileFromCarbonPortal.py",
+      "src/icosPrep.py",
+      "src/utils/__init__.py",
+      "src/utils/boringStuff.py",
+      "src/utils/housekeeping.py",
+      "src/utils/logging.py",
+      "src/utils/niceLogging.py",
+      "src/utils/system.py",
+      "src/utils/units.py"
+    ],
+    "SOURCESDIR": "src",
+    "SPELLEXCLUDES": "",
+    "SPELLLANGUAGE": "en_US",
+    "SPELLWORDS": "",
+    "TESTING_FRAMEWORK": "",
+    "TRANSLATIONEXCEPTIONS": [],
+    "TRANSLATIONPATTERN": "",
+    "TRANSLATIONS": [],
+    "TRANSLATIONSBINPATH": "",
+    "TRANSLATIONSOURCESTARTPATH": "",
+    "UICPARAMS": {
+      "Package": "",
+      "PackagesRoot": "",
+      "RcSuffix": ""
+    },
+    "VCS": "Git",
+    "VCSOPTIONS": {
+      "add": [
+        ""
+      ],
+      "checkout": [
+        ""
+      ],
+      "commit": [
+        ""
+      ],
+      "diff": [
+        ""
+      ],
+      "export": [
+        ""
+      ],
+      "global": [
+        ""
+      ],
+      "history": [
+        ""
+      ],
+      "log": [
+        ""
+      ],
+      "remove": [
+        ""
+      ],
+      "status": [
+        ""
+      ],
+      "tag": [
+        ""
+      ],
+      "update": [
+        ""
+      ]
+    },
+    "VCSOTHERDATA": {},
+    "VERSION": "0.1"
+  }
+}

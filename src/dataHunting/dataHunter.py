@@ -82,7 +82,7 @@ def verifyYmlFile(ymlFile):
         sys.exit(-3)
     return(ymlFile)
 
-def prepareCallToLumiaGUI(ymlFile, args): 
+def prepareCallToLumiaGUI(ymlFile,  USE_TKINTER, args): 
     '''
     Function 
     LumiaGUI exposes selected paramters of the LUMIA config file (in yaml data format) to a user
@@ -99,6 +99,15 @@ def prepareCallToLumiaGUI(ymlFile, args):
     @type string (file name)
     '''
 
+    if(USE_TKINTER):
+        import guiElementsTk as ge
+        #import tkinter as tk    
+    else:
+        import ipywidgets  as wdg
+        import guiElements_ipyWdg as ge
+        from IPython.display import display #, HTML,  clear_output
+        # from ipywidgets import  Dropdown, Output, Button, FileUpload, SelectMultiple, Text, HBox, IntProgress
+
     # Do the housekeeping like documenting the current git commit version of this code, date, time, user, platform etc.
     thisScript='LumiaGUI'
     # scriptDirectory = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -110,10 +119,10 @@ def prepareCallToLumiaGUI(ymlFile, args):
 
     # remove old message files - these are only relevant if LumiaGUI is used in an automated workflow as they signal
     # success or failure of this step in the workflow
-    if(os.path.isfile("LumiaGui.stop")):
-        os.remove('LumiaGui.stop') # sCmd="rm LumiaGui.stop" #hk.runSysCmd(sCmd,  ignoreError=True)
-    if(os.path.isfile("LumiaGui.go")):
-        os.remove('LumiaGui.go') # sCmd="rm LumiaGui.go" #hk.runSysCmd(sCmd,  ignoreError=True)
+    if(os.path.isfile("icosPrep.stop")):
+        os.remove('icosPrep.stop') # sCmd="rm icosPrep.stop" #hk.runSysCmd(sCmd,  ignoreError=True)
+    if(os.path.isfile("icosPrep.go")):
+        os.remove('icosPrep.go') # sCmd="rm icosPrep.go" #hk.runSysCmd(sCmd,  ignoreError=True)
 
     # ensure we have a display connected
     myDsp=os.environ.get('DISPLAY','')
@@ -175,7 +184,7 @@ def prepareCallToLumiaGUI(ymlFile, args):
     #    time.sleep(1)
     logger.info('LumiaGUI completed successfully. The updated Lumia config file has been written to:')
     logger.info(ymlFile)
-    return
+    return(True, ymlFile)
 
 
 
@@ -2136,17 +2145,6 @@ if((args.start is not None) or (args.rcf is not None) or (args.ymf is not None))
     USE_TKINTER=True # called as a notebook, not from the commandline
 if(args.noTkinter):
     USE_TKINTER=False
-if(USE_TKINTER):
-    import guiElementsTk as ge
-    import tkinter as tk    
-    #import customtkinter as ctk
-else:
-    import ipywidgets  as wdg
-    #from jupyter_ui_poll import ui_events
-    #from functools import partial
-    import guiElements_ipyWdg as ge
-    from IPython.display import display #, HTML,  clear_output
-    # from ipywidgets import  Dropdown, Output, Button, FileUpload, SelectMultiple, Text, HBox, IntProgress
 if(args.rcf is None):
     if(args.ymf is None):
         ymlFile=None
