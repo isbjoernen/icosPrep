@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-LATESTGITCOMMIT_icosPrep='a744fda1942125dfa447a2597da6e6a510fd9ddd'
+LATESTGITCOMMIT_icosPrep='85504dc38c2725f29c03c4b07992e1892da54015'
 LATESTGITCOMMIT_LumiaMaster='186409332c94be3cb2c5cafe8edb578b166e11d3'
 LATESTGITCOMMIT_masterPlus='2fc00b3f9600af4cccacd7da5ce2aa6e31f01bc4'
 LATESTGITCOMMIT_LumiaDA='09957785de81f6653ca62b3cd735d114b0c660f3'
@@ -487,11 +487,11 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
             logger.debug(f'Which you should also be able to get from : {remoteCommitUrl}')
             # https://github.com/lumia-dev/lumia/commit/6be5dd54aa5a16b136c2c1e2685fc8abf2beb404
     
-    if(LATESTGITCOMMIT_LumiaDA not in myCom):
+    if(LATESTGITCOMMIT_icosPrep not in myCom):
         if('UNKNOWN' in myCom):
-            logger.info(f"\nWarning: Cannot verify whether the present version of lumiaGUI with git commit hash \nLATESTGITCOMMIT_LumiaDA ({LATESTGITCOMMIT_LumiaDA}) taken from said variable at the top of this \nlumia.GUI.housekeeping.py file is actually the latest version or not due to a missing local .git info tree.")
+            logger.info(f"\nWarning: Cannot verify whether the present version of lumiaGUI with git commit hash \nLATESTGITCOMMIT_icosPrep ({LATESTGITCOMMIT_icosPrep}) taken from said variable at the top of this \nlumia.GUI.housekeeping.py file is actually the latest version or not due to a missing local .git info tree.")
         else:                
-            logger.error(f"\nError: There is a mismatch between the current local or remote git commit hash ({myCom}) and \nthe LATESTGITCOMMIT_LumiaDA ({LATESTGITCOMMIT_LumiaDA}) variable at the top of this lumia.GUI.housekeeping.py file. \nPlease check if there is a newer version on github or whether you forgot to push your latest local commit to the remote github.\nPlease consider resolving the conflict before proceeding.")
+            logger.error(f"\nError: There is a mismatch between the current local or remote git commit hash ({myCom}) and \nthe LATESTGITCOMMIT_icosPrep ({LATESTGITCOMMIT_icosPrep}) variable at the top of this lumia.GUI.housekeeping.py file. \nPlease check if there is a newer version on github or whether you forgot to push your latest local commit to the remote github.\nPlease consider resolving the conflict before proceeding.")
         #sys.exit(-5)
 
     wrongOrMissingVersion=False
@@ -513,7 +513,7 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
     if(wrongOrMissingVersion):    
         logger.error(f'Wrong format of input Lumia config yml file. Your configuration file needs to be of major version=={nThisConfigFileVersion} and sub-version>0.')
         sys.exit(-3)
-    return(nVers, nSubVers, repoUrl, branch, sLocalGitRepos,   remoteCommitUrl , myCom, LATESTGITCOMMIT_LumiaDA)
+    return(nVers, nSubVers, repoUrl, branch, sLocalGitRepos,   remoteCommitUrl , myCom, LATESTGITCOMMIT_icosPrep)
 
 
 def readYmlCfgFile(ymlFile):
@@ -742,7 +742,7 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  p
     logger.info(f'{args}')  # document how Lumia was called including commandline options
     
     # ### query Git - what version of Lumia are we running? ### #        
-    (nVers, nSubVers, repoUrl, branch, sLocalGitRepos, remoteCommitUrl, myCom, LATESTGITCOMMIT_LumiaDA)=\
+    (nVers, nSubVers, repoUrl, branch, sLocalGitRepos, remoteCommitUrl, myCom, LATESTGITCOMMIT_icosPrep)=\
                                                         queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFileVersion, nThisConfigFileSubVersion,  packageRootDir)
     # # setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'model',  'transport',  'exec'],   value='/lumia/transport/multitracer.py', bNewValue=False)
     setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'model',  'executable'],   value='${lumia:transport/multitracer.py}', bNewValue=False)
@@ -961,8 +961,8 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  p
     setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'softwareUsed',  'lumia',  'git',  'branch'],   value=branch, bNewValue=True)
     setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'softwareUsed',  'lumia',  'git',  'lumiaFlavour'],   value=lumiaFlavour, bNewValue=True)
     setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'softwareUsed',  'lumia',  'git',  'url'],   value='git@github.com:lumia-dev/lumia.git', bNewValue=True)
-    setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'softwareUsed',  'lumia',  'git',  'commit'],   value=LATESTGITCOMMIT_LumiaDA, bNewValue=True)
-    setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'softwareUsed',  'lumia',  'git',  'location'],   value='git@github.com:lumia-dev/lumia/commit/'+LATESTGITCOMMIT_LumiaDA, bNewValue=True)
+    setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'softwareUsed',  'lumia',  'git',  'commit'],   value=LATESTGITCOMMIT_icosPrep, bNewValue=True)
+    setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'softwareUsed',  'lumia',  'git',  'location'],   value='git@github.com:lumia-dev/lumia/commit/'+LATESTGITCOMMIT_icosPrep, bNewValue=True)
     # runflex
     #setKeyVal_Nested_CreateIfNecessary(ymlContents, [  'softwareUsed',  'runflex',  'branch'],   value='gitkraken://repolink/b9411fbf7aeeb54d7bb34331a98e2cc0b6db9d5f/branch/v2?url=https%3A%2F%2Fgithub.com%2Flumia-dev%2Frunflex.git',  bNewValue=True)
     #setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'softwareUsed',  'runflex',  'commit'],   value='gitkraken://repolink/b9411fbf7aeeb54d7bb34331a98e2cc0b6db9d5f/commit/aad612b36a247046120bda30c8837acb5dec4f26?url=https%3A%2F%2Fgithub.com%2Flumia-dev%2Frunflex.git',  bNewValue=True)
