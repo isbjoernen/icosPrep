@@ -2,7 +2,8 @@
 
 import os
 import sys
-import housekeeping as hk
+# import pathlib
+import utils.housekeeping as hk
 import pandas as pd
 import argparse
 from datetime import datetime,  timedelta
@@ -12,7 +13,8 @@ import yaml
 from pandas import to_datetime
 from loguru import logger
 #import _thread
-from queryCarbonPortal import discoverObservationsOnCarbonPortal
+from dataHunting.queryCarbonPortal import discoverObservationsOnCarbonPortal
+import utils.boringStuff as bs
 
 global AVAIL_LAND_NETEX_DATA  # Land/vegetation net exchange model emissions that are supported
 AVAIL_LAND_NETEX_DATA=["LPJ-GUESS","VPRM"]
@@ -28,15 +30,11 @@ AVAIL_OCEAN_NETEX_DATA=["mikaloff01"]
         # https://hdl.handle.net/11676/De0ogQ4l6hAsrgUwgjAoGDoy EDGARv4.3_BP2021_CO2_EU2_2018.nc
 
 APPISACTIVE=True
+global USE_TKINTER
 USE_TKINTER=True
 scriptName=sys.argv[0]
 if('.ipynb' in scriptName[-6:]):
     USE_TKINTER=False
-# For testing of ipywidgets uncomment the next line (even if not a notebook)
-
-import boringStuff as bs
-
-
 
 # =============================================================================
 # Core functions with interesting tasks
@@ -53,7 +51,14 @@ def verifyYmlFile(ymlFile):
     (Jupyter notebook or using ipywidgets), then the user needs to select an appropriate file before proceeding. This file is crucial to
     have before lumiaGUI can do anything meaningful.
     '''
-    title='Open existing LUMIA configuration file:'
+    #if(USE_TKINTER):
+    #    import guiElementsTk as ge
+        #import tkinter as tk    
+    #else:
+        #import ipywidgets  as wdg
+    #    import guiElements_ipyWdg as ge
+    #    from IPython.display import display 
+    #title='Open existing LUMIA configuration file:'
     filename=ymlFile
     if(ymlFile is None):
         filetypes='*.yml'
@@ -82,7 +87,7 @@ def verifyYmlFile(ymlFile):
         sys.exit(-3)
     return(ymlFile)
 
-def prepareCallToLumiaGUI(ymlFile,  USE_TKINTER, args): 
+def prepareCallToLumiaGUI(ymlFile,  packageRootDir, args): 
     '''
     Function 
     LumiaGUI exposes selected paramters of the LUMIA config file (in yaml data format) to a user
@@ -98,23 +103,15 @@ def prepareCallToLumiaGUI(ymlFile,  USE_TKINTER, args):
     @param ymlFile : the LUMIA YAML configuration file in yaml (or rc) data format (formatted text)
     @type string (file name)
     '''
-
-    if(USE_TKINTER):
-        import guiElementsTk as ge
-        #import tkinter as tk    
-    else:
-        import ipywidgets  as wdg
-        import guiElements_ipyWdg as ge
-        from IPython.display import display #, HTML,  clear_output
-        # from ipywidgets import  Dropdown, Output, Button, FileUpload, SelectMultiple, Text, HBox, IntProgress
-
-    # Do the housekeeping like documenting the current git commit version of this code, date, time, user, platform etc.
-    thisScript='LumiaGUI'
+        
     # scriptDirectory = os.path.dirname(os.path.abspath(sys.argv[0]))
     iVerbosityLv=args.verbosity
     ymlFile=verifyYmlFile(ymlFile)
     initialYmlFile=ymlFile
-    (ymlFile, oldDiscoveredObservations)=hk.documentThisRun(initialYmlFile, thisScript,  args)  # from housekeepimg.py
+    # Do the housekeeping like documenting the current git commit version of this code, date, time, user, platform etc.
+    thisScript=sys.argv[0] 
+    packageName='icosPrep' 
+    (ymlFile, oldDiscoveredObservations, myMachine)=hk.documentThisRun(initialYmlFile, thisScript,  packageName,  packageRootDir,  args)  # from housekeepimg.py
     # Now the config.yml file has all the details for this particular run
 
     # remove old message files - these are only relevant if LumiaGUI is used in an automated workflow as they signal
@@ -156,8 +153,16 @@ def prepareCallToLumiaGUI(ymlFile,  USE_TKINTER, args):
             logger.error('Abort. Unable to write log files. Unable to create requested output directory.')
     
     root=None
-    root = ge.LumiaGui() # is the ctk.CTk() root window
-    lumiaGuiAppInst=lumiaGuiApp(root)  # the main GUI application (class)
+    if(USE_TKINTER):
+        colorThemeFile=str(packageRootDir)+"/icosPrep/dataHunting/doc/dataHunter-dark-theme.json"
+        if('icosPrep' in str(packageRootDir)):
+            myTitle='icosPrep - prepare data from the ICOS portal for inverse modelling'
+        else:
+            myTitle='LUMIA - the Lund University Modular Inversion Algorithm'
+        root = ge.LumiaGui(colorThemeFile, myTitle) # is the ctk.CTk() root window
+    else:
+        root = ge.LumiaGui() 
+    lumiaGuiAppInst=lumiaGuiApp(root, USE_TKINTER)  # the main GUI application (class)
     lumiaGuiAppInst.sLogCfgPath = sLogCfgPath  # TODO: check if this is obsolete now
     lumiaGuiAppInst.initialYmlFile=initialYmlFile # the initial Lumia configuration file from which we started in case it needs to be restored
     lumiaGuiAppInst.ymlFile = ymlFile  # the current Lumia configuration file after pre-processing with housekeeping.py
@@ -192,17 +197,23 @@ def prepareCallToLumiaGUI(ymlFile,  USE_TKINTER, args):
 # Tkinter solution for GUI
 # =============================================================================
 class lumiaGuiApp:
-    def __init__(self, root):
+    def __init__(self, root, USE_TKINTER):
         self.root = root
         self.guiPg1TpLv=None
+        self.USE_TKINTER=USE_TKINTER
         if(USE_TKINTER):
+            #import guiElementsTk as ge
+            #import tkinter as tk    
             self.label1 = tk.Label(self.root, text="App main window - hosting the second GUI page.")
             self.root.protocol("WM_DELETE_WINDOW", self.closeApp)
-        #self.label1.pack()
-    
+        #else:
+            #import ipywidgets  as wdg
+            #import guiElements_ipyWdg as ge
+            #from IPython.display import display 
+   
  
     def closeTopLv(self, bWriteStop=True):  # of lumiaGuiApp
-        if(USE_TKINTER):
+        if(self.USE_TKINTER):
             self.guiPg1TpLv.destroy()
         if(bWriteStop):
             # do this in closeApp(): bs.cleanUp(bWriteStop=bWriteStop,  ymlFile=self.ymlFile)
@@ -1788,6 +1799,8 @@ class lumiaGuiApp:
         # set the size of the gui window before showing it
         self.widgetsLst = [] # list to hold dynamically created widgets that are created for each dataset found.
         if(USE_TKINTER):
+            #import guiElementsTk as ge
+            #import tkinter as tk            
             #self.root.xoffset=int(0.5*1920)
             self.root.geometry(f"{appWidth}x{appHeight}+{self.root.xoffset}+0")   
             #logger.debug(f'requested dimensions  GuiApp w={appWidth} h={appHeight}')
@@ -1801,13 +1814,15 @@ class lumiaGuiApp:
             self.wdgGrid = None
             self.wdgGrid3 = None
         else:
+            #import ipywidgets  as wdg
+            #import guiElements_ipyWdg as ge
+            from IPython.display import display 
             rootFrame=ge.pseudoRootFrame()
             self.wdgGrid = wdg.GridspecLayout(n_rows=6, n_columns=self.nCols,  grid_gap="3px")
             out = wdg.Output()
             display(out)
         #self.deiconify()
             
-
         # ====================================================================
         # variables needed for the widgets of the second GUI page  -- part of lumiaGuiApp (root window)
         # ====================================================================
@@ -2129,9 +2144,8 @@ def  readMyYamlFile(ymlFile):
 p = argparse.ArgumentParser()
 p.add_argument('--start', dest='start', default=None, help="Start of the simulation in date+time ISO notation as in \'2018-08-31 00:18:00\'. Overwrites the value in the rc-file")
 p.add_argument('--end', dest='end', default=None, help="End of the simulation as in \'2018-12-31 23:59:59\'. Overwrites the value in the rc-file")
-p.add_argument('--rcf', dest='rcf', default=None, help="Same as the --ymf option. Deprecated. For backward compatibility only.")   
 p.add_argument('--ymf', dest='ymf', default=None,  help='yaml configuration file where the user plans his or her Lumia run: parameters, input files etc.')   
-p.add_argument('--serial', '-s', action='store_true', default=False, help="Run on a single CPU")
+p.add_argument('--rootDir', dest='rootDir', default=None,  help='Root installation directory of the package (icosPrep, Lumia, LumiaGUI,..) that is calling this script')   
 p.add_argument('--noTkinter', '-n', action='store_true', default=False, help="Do not use tkinter (=> use ipywidgets)")
 p.add_argument('--verbosity', '-v', dest='verbosity', default='INFO')
 args, unknown = p.parse_known_args(sys.argv[1:])
@@ -2141,20 +2155,29 @@ logger.remove()
 logger.add(sys.stderr, level=args.verbosity)
 
 USE_TKINTER=False # when called from lumiaGUInotebook.ipynb there are no commandline options
-if((args.start is not None) or (args.rcf is not None) or (args.ymf is not None)):
+if((args.start is not None) or (args.ymf is not None)):
     USE_TKINTER=True # called as a notebook, not from the commandline
 if(args.noTkinter):
     USE_TKINTER=False
-if(args.rcf is None):
-    if(args.ymf is None):
-        ymlFile=None
-    else:
-        ymlFile = args.ymf
-else:            
-    ymlFile = args.rcf
-
+if(USE_TKINTER):
+    import guiElementsTk as ge
+    import tkinter as tk    
+else:
+    import ipywidgets  as wdg
+    import guiElements_ipyWdg as ge
+    from IPython.display import display 
+if(args.ymf is None):
+    ymlFile=None
+else:
+    ymlFile = args.ymf
+if (args.rootDir is None):
+    packageRootDir=None
+else:
+    packageRootDir=str(args.rootDir)
 
 # Call the main method
-prepareCallToLumiaGUI(ymlFile, args)
+prepareCallToLumiaGUI(ymlFile, packageRootDir,  args)
 
-
+# e.g. 
+# python /home/cec-ami/nateko/dev/py/icosPrep/icosPrep/dataHunting/dataHunter.py  --verbosity=DEBUG 
+#         --ymf=/home/arndt/nateko/data/icos/DICE/lumia-config-v6-tr-co2.yml   --rootDir=/home/cec-ami/nateko/dev/py/icosPrep

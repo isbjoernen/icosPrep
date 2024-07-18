@@ -6,22 +6,20 @@ import sys
 import os
 import re
 import datetime
-import housekeeping as hk
+import utils.housekeeping as hk
 from loguru import logger
 import numpy as np
 from pandas import DataFrame  #, concat
 # from icoscp.sparql import sparqls, runsparql
 try:
-    import myCarbonPortalTools
+    import dataHunting.myCarbonPortalTools
 except:
-    try:
-        import lumia.GUI.myCarbonPortalTools as myCarbonPortalTools
-    except:
-        logger.error('Failed to import lumia.GUI.myCarbonPortalTools.py')
-        sys.exit(1)
+    logger.error('Failed to import lumia.GUI.myCarbonPortalTools.py')
+    sys.exit(1)
     
 from icoscp.sparql.runsparql import RunSparql
-from icoscp.cpb.dobj import Dobj
+#from icoscp.cpb.dobj import Dobj   deprecated
+#from icoscp.dobj import Dobj     # better/newer
 from icoscp.collection import collection
 from icoscp.cpb import metadata
 from icoscp_core.icos import meta as coreMeta

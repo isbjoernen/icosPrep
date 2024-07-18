@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
-LATESTGITCOMMIT_LumiaDA='c57381a002519572f400a88f22ed651df92965c0'
+LATESTGITCOMMIT_icosPrep='a744fda1942125dfa447a2597da6e6a510fd9ddd'
+LATESTGITCOMMIT_LumiaMaster='186409332c94be3cb2c5cafe8edb578b166e11d3'
+LATESTGITCOMMIT_masterPlus='2fc00b3f9600af4cccacd7da5ce2aa6e31f01bc4'
+LATESTGITCOMMIT_LumiaDA='09957785de81f6653ca62b3cd735d114b0c660f3'
 LATESTGITCOMMIT_Runflex='9ef682d69e32fdfd1e1c23e742149c6268b8715a'
 
 import os
@@ -10,14 +13,14 @@ import glob
 import getpass
 import platform
 # import distro
-import pathlib
+from pathlib import Path
 import hashlib
 import re
 import yaml
 from time import time
 from datetime import datetime
 from dateutil.parser import parse
-from pandas import  Timestamp  # , to_datetime
+from pandas import  Timestamp  
 from loguru import logger
 
 
@@ -41,7 +44,7 @@ def configureOutputDirectories (ymlContents, ymlFile, lumiaFlavour, sNow, myMach
         sOutpDir=ymlContents['run']['paths']['output']
         while(sOutpDir[0]=='$'): 
             useMachine=True
-            sOutpDir=expandKeyValue(sOutpDir[2:-1] ,ymlContents, myMachine)
+            sOutpDir=expandKeyValue(sOutpDir ,ymlContents, myMachine)
 
     except:
         sOutpDir="./output"
@@ -68,7 +71,7 @@ def configureOutputDirectories (ymlContents, ymlFile, lumiaFlavour, sNow, myMach
         sTmpDir=ymlContents['run']['paths']['temp']
         while(sTmpDir[0]=='$'):
             useMachine =True
-            sTmpDir=expandKeyValue(sTmpDir[2:-1] ,ymlContents, myMachine)
+            sTmpDir=expandKeyValue(sTmpDir ,ymlContents, myMachine)
     except:
         sTmpDir="./tmp"
         setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'run',  'paths',  'temp' ],   value=sTmpDir, bNewValue=True)
@@ -92,9 +95,14 @@ def configureOutputDirectories (ymlContents, ymlFile, lumiaFlavour, sNow, myMach
     return(sOutputPrfx,  sTmpPrfx,  useMachine)
 
 
-def expandKeyValue(namedVariable,ymlContents,myMachine):
-    # namedVariable[2:-1] contains something like ${run.paths.emissions}
+def expandKeyValue(stringWithKeyReferencer,ymlContents,myMachine):
+    # stringWithKeyReferencer contains something like ${run.paths.emissions} or even ${run.paths.data}/fluxes/nc/ 
+    # or ${machine.footprints} that needs to be expanded to  machine.MYMACHINE.footprints where MYMACHINE could be cosmos, laptop, ....
     n=0
+    try:
+        namedVariable, sep, tail = stringWithKeyReferencer[2:].partition('}')
+    except:
+        namedVariable=stringWithKeyReferencer[2:-1] # strips ${} from the string
     while(n<2):
         keys=namedVariable.split('.')
         j=len(keys)
@@ -130,7 +138,7 @@ def expandKeyValue(namedVariable,ymlContents,myMachine):
         except:
             myMachine='machines.'+myMachine
             n=n+1
-    return(expandedKey)
+    return(expandedKey+tail)
 
 def getDictItemsFromParticularLv(myDict): 
     keys=[]
@@ -159,7 +167,7 @@ def getStartEndTimes(ymlContents, ymlFile, args, myMachine):
         if((start is not None) and (isinstance(start, str))):        
             while(start[0]=='$'): 
                 bUseMachine=True
-                start=expandKeyValue(start[2:-1] ,ymlContents,myMachine)
+                start=expandKeyValue(start ,ymlContents,myMachine)
     else:
         start= Timestamp(args.start)
     sStart= start.strftime('%Y-%m-%d')+' 00:00:00'
@@ -176,7 +184,7 @@ def getStartEndTimes(ymlContents, ymlFile, args, myMachine):
                     logger.error(f'No valid end time found in the keys run.time.end nor observations.end nor time.end of your yml file {ymlFile}. Please fix or use the commandline option --end.')
         if((end is not None) and (isinstance(end, str))):        
             while(end[0]=='$'): 
-                end=expandKeyValue(end[2:-1] ,ymlContents,myMachine)
+                end=expandKeyValue(end ,ymlContents,myMachine)
     else:
         end= Timestamp(args.end)
     sEnd= end.strftime('%Y-%m-%d')+' 23:59:59'
@@ -185,12 +193,12 @@ def getStartEndTimes(ymlContents, ymlFile, args, myMachine):
     try:
         timeStep=ymlContents['run']['time']['timestep']
         while(timeStep[0]=='$'): 
-            timeStep=expandKeyValue(timeStep[2:-1] ,ymlContents,myMachine)
+            timeStep=expandKeyValue(timeStep ,ymlContents,myMachine)
     except:
         try:
             timeStep=ymlContents['run']['timestep']
             while(timeStep[0]=='$'): 
-                timeStep=expandKeyValue(timeStep[2:-1] ,ymlContents,myMachine)
+                timeStep=expandKeyValue(timeStep ,ymlContents,myMachine)
             #This is the part of the code which filters out the undesired keys
             #ymlContents = filter(lambda x: x['name']!='temp_key2', ymlContents) 
         except:
@@ -247,7 +255,7 @@ def handleBackgndData(ymlContents, ymlFile,  sOutputPrfx, myMachine):
             myfile=ymlContents['background']['concentrations'][tracer]['backgroundFiles']
             while(myfile[0]=='$'): 
                 bUseMachine=True
-                myfile=expandKeyValue(myfile[2:-1] ,ymlContents, myMachine)
+                myfile=expandKeyValue(myfile ,ymlContents, myMachine)
             if(bUseMachine):
                 try:
                     splitty=myMachine.split('.')
@@ -336,7 +344,7 @@ def  handleObsData(ymlContents, ymlFile, parentScript, lumiaFlavour, sOutputPrfx
                 try:
                     localObsDataFile=ymlContents['observations'][tracer]['file']['path']
                     while(localObsDataFile[0]=='$'): 
-                        localObsDataFile=expandKeyValue(localObsDataFile[2:-1], ymlContents, myMachine)
+                        localObsDataFile=expandKeyValue(localObsDataFile, ymlContents, myMachine)
                     if (not os.path.isfile(localObsDataFile)) or (not os.access(localObsDataFile, os.R_OK)):
                         bErr=True
                 except:
@@ -379,7 +387,7 @@ def  handleObsData(ymlContents, ymlFile, parentScript, lumiaFlavour, sOutputPrfx
     return(sha256Value, tracer, newFnameSelectedObsData, newFnameSelectedPIDs, oldDiscoveredObservations)
 
 
-def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFileVersion, nThisConfigFileSubVersion):  
+def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFileVersion, nThisConfigFileSubVersion, packageRootDir):  
     # ### query Git - what version of Lumia are we running? ### #        
     # Get the local git hash so we have some clue of what version of LUMIA we may be using...
     localRepo='UNKNOWN    '
@@ -387,23 +395,27 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
     branch='UNKNOWN    '
     repoUrl='UNKNOWN    '
     myCom='UNKNOWN    '
+    # To find the .git directory, determine where hte Lumia or icosPrep package has been installed:
     scriptName=sys.argv[0]
     script_directory = os.path.dirname(os.path.abspath(scriptName))
-    scriptTail=scriptName[-6:]
-    lumiaGUIdir=pathlib.Path(script_directory)
-    oneLevelUp=lumiaGUIdir.parent
-    lumiaDA_directory=oneLevelUp.parent
-    bHaveGit=True
-    branch='UNKNOWN'
-    if('.ipynb' in scriptTail):
-        logger.info('Local git information is not available from this python notebook. This means we cannot check what the latest version is, but that is not a drama.')
-        bHaveGit=False
+    
+    if(packageRootDir is None):
+        #scriptTail=scriptName[-6:]
+        lumiaGUIdir=Path(script_directory)
+        oneLevelUp=lumiaGUIdir.parent
+        packageRootDir=oneLevelUp.parent
     else:
-        try:
-            import git
-        except:
-            bHaveGit=False
-            logger.info('Local git information is not available in your Python environment. This means we cannot check what the latest version is, but that is not a drama.')
+        if not (os.path.isdir(str(packageRootDir)+'/.git')):
+            packageRootDir=Path(packageRootDir)
+            tryP=packageRootDir.parent
+            if (os.path.isdir(str(tryP)+'/.git')):
+                packageRootDir=tryP
+    packageRootDir=str(packageRootDir)
+    
+    bHaveGit=True
+    if not (os.path.isdir(str(packageRootDir)+'/.git')):
+        bHaveGit=False
+        logger.info('Local git information is not available in your Python environment. This means we cannot check what the latest version is, but that is not a drama.')
     '''
         pip show lumia
         Name: lumia
@@ -418,6 +430,7 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
         Requires: bottleneck, dask, h5netcdf, h5py, loguru, matplotlib, mkdocs, netCDF4, numpy, omegaconf, pandas, pint, python-dateutil, scipy, setuptools, tables, tqdm, xarray
         Required-by: (LumiaMaster)    
     '''
+    '''
     bHaveGitRoot=False
     sCmd='pip show lumia'
     try:
@@ -430,25 +443,28 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
                 bHaveGitRoot=True
     except:
         logger.warning("No Lumia installation directory found. Very odd. Please check why >pip show lumia< returns an error.")
-        
-    if(bHaveGit):    
+    '''    
+    if(bHaveGit):  
+        import git
+        bLocalRepo=True
+            # The correct .git info is found in the LumiaMaster or LumiaDA directory, typically 1 or 2 directories up from the main() script
         try:
-            # https://github.com/lumia-dev/lumia/commit/6be5dd54aa5a16b136c2c1e2685fc8abf2beb404
-            if(('LumiaGUI' in parentScript) or ('LumiaGUI' in lumiaFlavour)):
-                # The correct .git info is found in the LumiaMaster or LumiaDA directory, typically 1 or 2 directories up from the main() script
-                try:
-                    localRepo = git.Repo(lumiaDA_directory, search_parent_directories=True)
-                except:
-                    localRepo = git.Repo(script_directory, search_parent_directories=True)
-            else:        
-                localRepo = git.Repo(script_directory, search_parent_directories=True)
-            logger.debug(f'localRepo={localRepo}')
+            localRepo = git.Repo(packageRootDir, search_parent_directories=True)
+        except:
             try:
-                if(not bHaveGitRoot):
-                    sLocalGitRepos=localRepo.working_tree_dir # /home/arndt/dev/lumia/lumiaDA/lumia
-                logger.debug(f'Found localRepo.working_tree_dir info at : {sLocalGitRepos}')
+                logger.debug(f'localRepo={localRepo}')
+                localRepo = git.Repo(script_directory, search_parent_directories=True)
             except:
-                logger.debug('Failed to find localRepo.working_tree_dir info')
+                sLocalGitRepos=localRepo.working_tree_dir # /home/arndt/dev/lumia/lumiaDA/lumia
+                logger.debug(f'Found localRepo.working_tree_dir info at : {sLocalGitRepos}')
+                try:
+                    localRepo = git.Repo(sLocalGitRepos, search_parent_directories=True)
+                except:
+                    logger.debug('Failed to find localRepo.working_tree_dir info')
+                    remoteCommitUrl='UNKNOWN    '
+                    logger.info('Cannot find information about the local git repository. \nGit information logged in the log files of this run relies on what was written into this source file by the programmers alone.')
+                    bLocalRepo=False
+        if(bLocalRepo):
             try:
                 repoHead=localRepo.head.ref # repo.head.ref=LumiaDA
                 branch=str(repoHead)
@@ -470,9 +486,6 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
             remoteCommitUrl=repoUrl[:-4]+'/commit/'+str(localRepo.head.commit)
             logger.debug(f'Which you should also be able to get from : {remoteCommitUrl}')
             # https://github.com/lumia-dev/lumia/commit/6be5dd54aa5a16b136c2c1e2685fc8abf2beb404
-        except:
-            remoteCommitUrl='UNKNOWN    '
-            logger.info('Cannot find information about the local git repository. \nGit information logged in the log files of this run relies on what was written into this source file by the programmers alone.')
     
     if(LATESTGITCOMMIT_LumiaDA not in myCom):
         if('UNKNOWN' in myCom):
@@ -611,17 +624,18 @@ def tryToCreateNewToken(ymlContents, myMachine):
     try:
         tokenGenerator=ymlContents['emissions']['tokenGenerator']
         while(tokenGenerator[0]=='$'): 
-            tokenGenerator=expandKeyValue(tokenGenerator[2:-1] ,ymlContents, myMachine)
+            tokenGenerator=expandKeyValue(tokenGenerator ,ymlContents, myMachine)
         print(tokenGenerator)
         os.system(tokenGenerator)
     except:
         logger.warning('The key emissions.tokenGenerator is not defined in your yaml configuration file, so I cannot call it for you. You will have to create a valid token by your usual means before running LUMIA.')
         return  # user has to fix the token issue manually after the exception will be raised
     
-def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', args=None, myMachine= 'UNKNOWN',  interactive=True):
+def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  packageRootDir=None, args=None, myMachine= 'UNKNOWN',  interactive=True):
     # current version of the yml config files:
     nThisConfigFileVersion= int(6)
     nThisConfigFileSubVersion=int(2)
+    useMachine=False
     # Now read the yaml configuration file - whether altered by the GUI or not
     ymlContents=readYmlCfgFile(ymlFile)
 
@@ -632,19 +646,21 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
             mkey=ymlContents['machineChosen']  # I have chosen this rather odd name so it appears in the yaml file just before the list of known machines
             myMachine=mkey
         except:
-            print("Fatal error: UNKNOWN machine. Select one of the machines defined in your yaml config file either by providing the name via the commandline or by setting the key machineChosen in your yaml config file - add machines as needed.")
-            sys.exit(-2)
+            setKeyVal_Nested_CreateIfNecessary(ymlContents, ['machineChosen'],   value=myMachine, bNewValue=True)
+            #print("Fatal error: UNKNOWN machine. Select one of the machines defined in your yaml config file either by providing the name via the commandline or by setting the key machineChosen in your yaml config file - add machines as needed.")
+            #sys.exit(-28)
     else: # machine provided on commandline overrides config file settings
         setKeyVal_Nested_CreateIfNecessary(ymlContents, ['machineChosen'],   value=myMachine, bNewValue=True)
-    try:
-        tkey=ymlContents[myMachine]  # old style, machine entries anywhere in the yaml file
-    except:
+    if not('UNKNOWN' in myMachine):
         try:
-            tkey=ymlContents['machines'][myMachine]
-            myMachine='machines.'+myMachine  # newer style with all machine definitions under a common machine: entry
+            tkey=ymlContents[myMachine]  # old style, machine entries anywhere in the yaml file
         except:
-            logger.error(f'Fatal error: User provided machine name {myMachine} not found in the specified yaml config file {ymlFile}')
-            sys.exit(-4)
+            try:
+                tkey=ymlContents['machines'][myMachine]
+                myMachine='machines.'+myMachine  # newer style with all machine definitions under a common machine: entry
+            except:
+                logger.error(f'Fatal error: User provided machine name {myMachine} not found in the specified yaml config file {ymlFile}')
+                sys.exit(-4)
     # the unique identifer used in folder and file names is based on the date of time we run Lumia
     current_date = datetime.now()
     sNow=current_date.isoformat("T","seconds") # sNow is the time stamp for all log files of a particular run
@@ -669,9 +685,11 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
     # Run-dependent paths
     setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'transport',  'output'],   value= 'T', bNewValue=False)
     setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'transport',  'steps'],   value='forward', bNewValue=False)
-    
-    if ((args is not None) and (args.serial)) : 
-        setKeyVal_Nested_CreateIfNecessary(ymlContents, ['model', 'options',  'serial'],   value=True, bNewValue=True)
+    try:  # icosPrep has no args.serial option
+        if ((args is not None) and (args.serial)) : 
+            setKeyVal_Nested_CreateIfNecessary(ymlContents, ['model', 'options',  'serial'],   value=True, bNewValue=True)
+    except:
+        pass
     myCom=""
 
     # Let's be nice: check if a token is required for rclone and if yes, check if it is valid, before wasting time on a doomed Lumia run... 
@@ -684,7 +702,7 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
         archiveAccessKey=ymlContents['emissions'][tracer]['archive']
         while(archiveAccessKey[0]=='$'): 
             useMachine=True
-            archiveAccessKey=expandKeyValue(archiveAccessKey[2:-1] ,ymlContents, myMachine)
+            archiveAccessKey=expandKeyValue(archiveAccessKey ,ymlContents, myMachine)
         #if('--client-cert=' in archiveAccessKey):
         tokenFound = re.search('--client-cert=(.+?) ', archiveAccessKey)
         if(tokenFound):
@@ -701,7 +719,7 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
             try:
                 maxAge=ymlContents['emissions']['tokenTimeout']
                 while((isinstance(maxAge, str)) and (maxAge[0]=='$')): 
-                    maxAge=expandKeyValue(maxAge[2:-1] ,ymlContents, myMachine)
+                    maxAge=expandKeyValue(maxAge ,ymlContents, myMachine)
             except:
                 maxAge=12*3600
             if(ageInSeconds > int(maxAge)):
@@ -725,7 +743,7 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
     
     # ### query Git - what version of Lumia are we running? ### #        
     (nVers, nSubVers, repoUrl, branch, sLocalGitRepos, remoteCommitUrl, myCom, LATESTGITCOMMIT_LumiaDA)=\
-                                                        queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFileVersion, nThisConfigFileSubVersion)
+                                                        queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFileVersion, nThisConfigFileSubVersion,  packageRootDir)
     # # setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'model',  'transport',  'exec'],   value='/lumia/transport/multitracer.py', bNewValue=False)
     setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'model',  'executable'],   value='${lumia:transport/multitracer.py}', bNewValue=False)
 
@@ -754,35 +772,41 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
             setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'emissions',  tracer, 'categories', cat, 'location' ],   value='LOCAL', bNewValue=True)
         if(bCPortal):
             sha256Value='NotApplicable'
+            setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'emissions',  tracer,  'categories',  cat, 'sha256Value'],   value=sha256Value, bNewValue=True)
+            try:
+                del ymlContents['emissions'][tracer]['categories'][cat]['sha256Value']
+                # ymlContents.pop(['emissions'][tracer]['categories'][cat]['sha256Value'], None)
+            except:
+                pass
         else:
             origin = ymlContents['emissions'][tracer]['categories'][cat]['origin']
             #regionGrid=ymlContents['emissions'][tracer]['region'] 
             #sRegion="lon0=%.3f, lon1=%.3f, lat0=%.3f, lat1=%.3f, dlon=%.3f, dlat=%.3f, nlon=%d, nlat=%d"%(regionGrid.lon0, regionGrid.lon1,  regionGrid.lat0,  regionGrid.lat1,  regionGrid.dlon,  regionGrid.dlat,  regionGrid.nlon,  regionGrid.nlat)
             myPath2FluxData1=ymlContents['emissions'][tracer]['path']  
             while(myPath2FluxData1[0]=='$'): 
-                myPath2FluxData1=expandKeyValue(myPath2FluxData1[2:-1] ,ymlContents,myMachine)
+                myPath2FluxData1=expandKeyValue(myPath2FluxData1 ,ymlContents,myMachine)
             #myPath2FluxData1='/home/arndt/nateko/data/icos/DICE/fluxes/nc/'
             try:
                 myPath2FluxData3=ymlContents['emissions'][tracer]['categories'][cat]['resample_from']
             except:
-                myPath2FluxData3='H'
+                myPath2FluxData3=ymlContents['run']['time']['timestep'] #'H' or '1h' or 'D' or '1d',....
             #myPath2FluxData3='1h/', D, M ,H, ...
             myPath2FluxData2='eurocom025x025'
             try:
                 myPath2FluxData2=ymlContents['emissions'][tracer]['regionName']
                 while(myPath2FluxData2[0]=='$'): 
-                    myPath2FluxData2=expandKeyValue(myPath2FluxData2[2:-1] ,ymlContents,myMachine)
+                    myPath2FluxData2=expandKeyValue(myPath2FluxData2 ,ymlContents,myMachine)
             except:
                 try:
                     myPath2FluxData2=ymlContents['run']['domain']
                     while(myPath2FluxData2[0]=='$'): 
-                        myPath2FluxData2=expandKeyValue(myPath2FluxData2[2:-1] ,ymlContents,myMachine)
+                        myPath2FluxData2=expandKeyValue(myPath2FluxData2 ,ymlContents,myMachine)
                 except:
                     # myPath2FluxData2='eurocom025x025'
                     logger.warning(f'Warning: No key emissions.{tracer}.regionName found in user defined resource file (used in pathnames). I shall try to guess it...')
                     mygrid=ymlContents['emissions'][tracer]['myRegion'] 
                     while(mygrid[0]=='$'): 
-                        mygrid=expandKeyValue(mygrid[2:-1] ,ymlContents,myMachine)
+                        mygrid=expandKeyValue(mygrid ,ymlContents,myMachine)
                     #if((250==int(mygrid.dlat*1000)) and (250==int(mygrid.dlon*1000)) and (abs((0.5*(mygrid.lat0+mygrid.lat1))-53)<mygrid.dlat)and (abs((0.5*(mygrid.lon0+mygrid.lon1))-10)<mygrid.dlon)):
                     if((250==int(mygrid['dlat']*1000)) and (250==int(mygrid['dlon']*1000)) and (abs((0.5*(mygrid['lat0']+mygrid['lat1']))-53)<mygrid['dlat']) and (abs((0.5*(mygrid['lon0']+mygrid['lon1']))-10)<mygrid['dlon'])):
                         myPath2FluxData2='eurocom025x025' # It is highly likely that the region is centered in Europe and has a lat/lon grid of a quarter degree
@@ -792,6 +816,24 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
             if ((len(myPath2FluxData1)>0) and (myPath2FluxData1[-1]!=os.path.sep)):
                 myPath2FluxData1=myPath2FluxData1+os.path.sep
             myPath2FluxData=myPath2FluxData1+myPath2FluxData2+os.path.sep+myPath2FluxData3
+            if not(os.path.isdir(myPath2FluxData)):
+                myPath2FluxData3='H'
+                myPath2FluxData=myPath2FluxData1+myPath2FluxData2+os.path.sep+myPath2FluxData3
+                if not(os.path.isdir(myPath2FluxData)):
+                    myPath2FluxData3='1h'
+                    myPath2FluxData=myPath2FluxData1+myPath2FluxData2+os.path.sep+myPath2FluxData3
+                    if not(os.path.isdir(myPath2FluxData)):
+                        myPath2FluxData3='D'
+                        myPath2FluxData=myPath2FluxData1+myPath2FluxData2+os.path.sep+myPath2FluxData3
+                        if not(os.path.isdir(myPath2FluxData)):
+                            myPath2FluxData3='1D'
+                            myPath2FluxData=myPath2FluxData1+myPath2FluxData2+os.path.sep+myPath2FluxData3
+                            if not(os.path.isdir(myPath2FluxData)):
+                                myPath2FluxData3='M'
+                                myPath2FluxData=myPath2FluxData1+myPath2FluxData2+os.path.sep+myPath2FluxData3
+                                if not(os.path.isdir(myPath2FluxData)):
+                                    myPath2FluxData3=ymlContents['run']['time']['timestep'] #'H' or '1h' or 'D' or '1d',....
+                                    myPath2FluxData=myPath2FluxData1+myPath2FluxData2+os.path.sep+myPath2FluxData3  # 
             myAltPath2FluxData=myPath2FluxData1+myPath2FluxData3 # sometimes we may end up with a /eurocom025x025/eurocom025x025 repetition in the path
             if (os.path.sep!=myPath2FluxData[-1]):     # Does the path end in a directory separator (forward or back-slash depending on OS)?
                 myPath2FluxData=myPath2FluxData+os.path.sep
@@ -799,13 +841,13 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
             if((origin is None)or(origin == '') or ('None' == origin)):
                 myPrefix=ymlContents['emissions'][tracer]['prefix']
                 while(myPrefix[0]=='$'): 
-                    myPrefix=expandKeyValue(myPrefix[2:-1] ,ymlContents,myMachine)
+                    myPrefix=expandKeyValue(myPrefix ,ymlContents,myMachine)
                 localEmisFile = os.path.join(myPath2FluxData, myPrefix)
             else: 
                 #/home/arndt/nateko/data/lumia-runs/LumiaMstr-2024-05-12-yoh/data/fluxes/eurocom025x025/H/
                 myYmlContents=ymlContents['emissions'][tracer]['prefix']
                 while(myYmlContents[0]=='$'): 
-                    myYmlContents=expandKeyValue(myYmlContents[2:-1] ,ymlContents,myMachine)
+                    myYmlContents=expandKeyValue(myYmlContents ,ymlContents,myMachine)
                 pattern = os.path.join(myPath2FluxData, myYmlContents + origin + '.????.nc')
                 localEmisFiles = glob.glob(pattern)
                 if len(localEmisFiles) == 0:
@@ -825,10 +867,10 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
             #except:
             #    pass  # if the key does not exists, then that's fine too
                 
-        setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'emissions',  tracer,  'categories',  cat, 'sha256Value'],   value=hashValues, bNewValue=True)
+            setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'emissions',  tracer,  'categories',  cat, 'sha256Value'],   value=hashValues, bNewValue=True)
 
     # ### how many cores or cpus may we use? ###
-    ncpus=1
+    ncpus=os.cpu_count()
     if(useMachine):
         if('.' in myMachine):
             machineParts=myMachine.split('.')
@@ -857,6 +899,8 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
         pass
     if(ncpus > os.cpu_count()):
         ncpus=int((0.8*ncpus)+0.5)  # TODO: testing if this helps with OOM errors
+    n2=os.cpu_count()
+    logger.info(f'Task set to use up to {ncpus} cpus out of a maximum number of available cpus of os.cpu_count()={n2}')
     if(useMachine):
         if('.' in myMachine):
             machineParts=myMachine.split('.')
@@ -1005,18 +1049,6 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia', ar
         logger.error(f'Abort. os.popen({sCmd}) returned an error. Future reproducibility of this Lumia run is compromised, because I cannot document the Python environment you are using.')
         sys.exit(-10)
 
-    # TODO remove this section once happy with the new yaml file created.
-    #sNewYmlFileName=ymlFile[:-5]+'-new.yaml'
-    #sCmd=f'mv {ymlFile} {sNewYmlFileName}'
-    #rValue=0
-    #print(f'sCmd={sCmd}')
-    #try:
-    #    rValue=os.system(sCmd)
-    #except:
-    #    logger.error(f'Abort. os.popen({sCmd}) returned an error. Future reproducibility of this Lumia run is compromised, because I cannot document the Lumia configuration you are using.')
-    #    sys.exit(-7)
-    # sCmd="cp "+ymlFile+'.bac '+ymlFile # recover backup file.
-    # os.system(sCmd)
     logger.info(f'updated configuratrion yaml file written to {sNewYmlFileName}')
     return(sNewYmlFileName, oldDiscoveredObservations, myMachine)  # oldDiscoveredObservations is only used by LumiaGUI
 

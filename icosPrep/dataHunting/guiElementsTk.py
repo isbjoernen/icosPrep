@@ -5,18 +5,18 @@ from tkinter import messagebox as mb
 #from loguru import logger
 
 '''
- This file guiElementsTk.py provides generig interfaces to tkinter and customtkinter GUI elements
+ This file guiElementsTk.py provides generic interfaces to tkinter and customtkinter GUI elements
 '''
 
 # LumiaGui Class =============================================================
 class LumiaGui(ctk.CTk):
-    def __init__(self): 
+    def __init__(self, colorThemeFile, myTitle): 
         ctk.set_appearance_mode("System")
         # TODO: make relative path to dark-theme
-        ctk.set_default_color_theme("/home/cec-ami/dev/py/icosPrep/src/dataHunting/doc/dataHunter-dark-theme.json")
+        ctk.set_default_color_theme(colorThemeFile) # "/home/cec-ami/dev/py/icosPrep/src/dataHunting/doc/dataHunter-dark-theme.json")
         ctk.CTk.__init__(self)
         # self.geometry(f"{maxW+1}x{maxH+1}")   is set later when we know about the screen dimensions
-        self.title('LUMIA - the Lund University Modular Inversion Algorithm')
+        self.title(myTitle) # 
         self.grid_rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
         self.activeTextColor='gray10'
