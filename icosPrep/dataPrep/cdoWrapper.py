@@ -2,8 +2,7 @@ import os
 import sys
 import xarray as xr
 import pandas as pd
-from gridtools import grid_from_rc
-from gridtools import Grid
+from utils.gridutils import Grid, grid_from_rc
 from loguru import logger
 
 

@@ -1,7 +1,8 @@
 from loguru import logger
 import re
 import os
-from icoscp.cpb import metadata
+#from icoscp import metadata
+from icoscp.dobj import Dobj
 from icoscp_core.icos import meta as coreMeta
 
 
@@ -29,6 +30,10 @@ def createIcosStationLut():
             icosStationLut[mkey]= value[0]  # Associated becomes 'A' one-letter-code
     return(icosStationLut)
 
+def getMetadataOldstyle(url):
+    dobj=Dobj(url)
+    meta=dobj.meta
+    return(meta)
 
 def  getMetaDataFromPid_via_icoscp_core(pid, suppressHugeCompilations=True):
     '''
@@ -60,16 +65,16 @@ def  getMetaDataFromPid_via_icoscp_core(pid, suppressHugeCompilations=True):
     mdata=[]
     ndr=0
     bCoreLib=True  # if set to True, the coreMeta.get_dobj_meta(url) from the icoscp_core.icos package is tried first
-        # if it fails, metadata.get(url) from the icoscp.cpb package is used as a fallback. If set to False, the order is reversed.
+        # if it fails, getMetadataOldstyle(url) from the icoscp.cpb package is used as a fallback. If set to False, the order is reversed.
     bAcceptable=True  
     url="https://meta.icos-cp.eu/objects/"+pid
     try:
         # Try the first method, e.g. the the low-level icscp-core library to query the metadata
-        pidMetadata =  coreMeta.get_dobj_meta(url) if (bCoreLib) else metadata.get(url)
+        pidMetadata =  coreMeta.get_dobj_meta(url) if (bCoreLib) else getMetadataOldstyle(url)
     except:
         try:
             bCoreLib=not bCoreLib # try the fallback method
-            pidMetadata =  coreMeta.get_dobj_meta(url) if (bCoreLib) else metadata.get(url)
+            pidMetadata =  coreMeta.get_dobj_meta(url) if (bCoreLib) else getMetadataOldstyle(url)
         except:
             print(f'Failed to get the metadata using icoscp.cpb for url={url}')
             return(None,  False)  # Tell the calling parent routine that things went south...
@@ -261,7 +266,7 @@ def  getPidFname(pid):
     
     The function searches through the most likely directories on the carbon portal itself in order to find a data record by its pid
     The icoscp package get(pid) method to read a data record has proven to be unreliable, so I prefer to read the actual file myself, 
-    though the aforementioned is implemented as a falback method (in the parent method) in case the record is not found in 
+    though the aforementioned is implemented as a fallback method (in the parent method) in case the record is not found in 
     the directories searched.
     
     @param pid persistent identifier of a data record held on the carbon portal 

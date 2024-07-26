@@ -9,11 +9,11 @@ from pandas import DataFrame, read_csv, read_hdf, Timestamp, to_datetime
 from pandas.api.types import is_float_dtype
 from loguru import logger
 from typing import List, Union
-from numpy import datetime64
+#from numpy import datetime64
 
 
 class obsdb:
-    def __init__(self, filename=None, start=None, end=None, db=None,  bFromCPortal=False,  rcFile=None, useGui: bool = False, ymlFile: str=None):
+    def __init__(self, filename=None, start=None, end=None, db=None,  bFromCPortal=False,  ymlContents=None, ymlFile: str=None,  tracer='co2'):
         if db is not None:
             self._parent = db
         else:
@@ -51,40 +51,32 @@ class obsdb:
             self.extraFields = {}
         if filename is not None:
             bFromCPortal=False
-            tracer='co2'
+            # tracer=hk.getTracer()
+
             try:
-                if (isinstance(rcFile['run']['tracers'], str)):
-                    tracer=rcFile['run']['tracers']
-                else:
-                    trac=rcFile['run']['tracers']
-                    tracer=trac[0]
+                sLocation=ymlContents['observations'][tracer]['file']['location']
             except:
-                tracer='co2'
-            try:
-                sLocation=rcFile.rcfGet(f'observations.{tracer}.file.location', default='LOCAL')
-            except:
-                logger.error(f'Either you have not specified the key observations.{tracer}.file.location in your yml config file or due to some bug a obsdb data object has been tried to create without providing a reference to valid rcFile object.')
-                sys.exit(-17)
+                sLocation='LOCAL'
+                #logger.error(f'Either you have not specified the key observations.{tracer}.file.location in your yml config file or due to some bug a obsdb data object has been tried to create without providing a reference to valid rcFile object.')
+                #sys.exit(-17)
             if('CARBONPORTAL' in sLocation):
                 bFromCPortal=True
 
             if (bFromCPortal):
-                self=self.load_fromCPortal(rcFile, useGui, ymlFile)
+                self=self.load_fromCPortal(ymlContents, ymlFile)
             else:
                 self.load_tar(filename)
             # self.observations.to_csv(sTmpPrfx+'_dbg_obsDataAll-ini48.csv', encoding='utf-8', mode='w', sep=',')
             self.filename = filename
-            try:
-                if self.start is None:
-                    self.start = self.observations.time.min()
-            except:
+            if (self.start is None) and (start is None):                
                 self.start = self.observations.time.min()
+            elif (self.start is None) and not (start is None):
+                self.start =start
             logger.debug(f'obsdb__ini__: self.start ={self.start}')
-            try:
-                if self.end is None:
-                    self.end = self.observations.time.max()
-            except:
+            if (self.end is None) and (end is None):                
                 self.end = self.observations.time.max()
+            if (self.end is None) and  not (end is None):                
+                self.end = end
             #if (bFromCPortal):
             #    return(self)  ...not allowed
 

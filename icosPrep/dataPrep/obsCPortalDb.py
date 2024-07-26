@@ -4,32 +4,27 @@ import os
 import sys
 from datetime import timedelta
 from numpy import zeros, sqrt
-import rctools
+#import rctools
 import tarfile
+import glob
 #import numpy as np
 #import yaml
 import xarray as xr
-from lumia.obsdb import obsdb
-from lumia.formatters.cdoWrapper import ensureReportedTimeIsStartOfMeasurmentInterval
-import lumia.GUI.boringStuff as bs
-import lumia.GUI.myCarbonPortalTools as myCarbonPortalTools
-import lumia.GUI.housekeeping as hk
+from dataPrep.cdoWrapper import ensureReportedTimeIsStartOfMeasurmentInterval
+import utils.boringStuff as bs
+import dataHunting.myCarbonPortalTools as myCarbonPortalTools
+import utils.housekeeping as hk
 from icoscp_core.icos import meta as iccMeta
 from icoscp_core.icos import data as iccData
 
 from multiprocessing import Pool
 from loguru import logger
-from typing import Union
 from pandas import DataFrame, to_datetime, concat , read_csv, offsets  # , Timestamp, Timedelta, read_hdf, Series  #, read_hdf, Series
 from pandas.api.types import is_float_dtype
-# from rctools import RcFile
-# from icoscp.cpb import metadata as meta
-from icoscp.cpb.dobj import Dobj
-#from icosPortalAccess.readObservationsFromCarbonPortal import discoverObservationsOnCarbonPortal, getSitecodeCsr
-#from icosPortalAccess.readObservationsFromCarbonPortal import chooseAmongDiscoveredObservations
-#from queryCarbonPortal import discoverObservationsOnCarbonPortal
-from lumia.GUI.queryCarbonPortal import discoverObservationsOnCarbonPortal
-from lumia.GUI.queryCarbonPortal import chooseAmongDiscoveredObservations
+from icoscp.dobj import Dobj
+#from dataHunting.queryCarbonPortal import discoverObservationsOnCarbonPortal
+#from dataHunting.queryCarbonPortal import chooseAmongDiscoveredObservations
+from dataPrep.obsdb import obsdb
 
 def _calc_weekly_uncertainty(site, times, err):
     err = zeros(len(times)) + err
@@ -40,10 +35,11 @@ def _calc_weekly_uncertainty(site, times, err):
     return site, err
 
 
+
 class obsdb(obsdb):
 
     @classmethod
-    def from_CPortal(cls, rcf: Union[dict, rctools.RcFile], setup_uncertainties: bool = True, filekey : str = 'file', useGui: bool = False, ymlFile: str=None) -> "obsdb":
+    def from_CPortal(cls, ymlContents, filekey : str = 'file', ymlFile: str=None) -> "obsdb":
         """
         Construct an observation database based on a rc-file and the carbon portal. The class does the following:
         - loads all tracer observation files from the carbon portal
@@ -51,21 +47,23 @@ class obsdb(obsdb):
         - calculate uncertainties (according to how specified in the rc-file)
 
         Arguments:
-            - rcf: rctools.RcFile object (or dict)
-            - setupUncertainties (optional): determine if the uncertainties need to be computed
+            - ymlContents: dict read from yaml config file
             - filename (optional): path of the file containing the obs (overrides the one given by filekey)
             - filekey (optional): name of the section containing the file path and relevant keys
 
         """
-        tracer=hk.getTracer(rcf['run']['tracers'])
+        tracer=hk.getTracer(ymlContents['run']['tracers'])
+        (starts, bUseMachine)=hk.getStartEnd(ymlContents, 'start')
+        (ends,  bUseMachine)=hk.getStartEnd(ymlContents, 'end')
         db = cls(
-            rcf['observations'][ tracer][filekey]['path'], 
-            start=rcf.rcfGet('observations.start', default=None), 
-            end=rcf.rcfGet('observations.end', default=None), 
-            rcFile=rcf,  useGui=useGui,  ymlFile=ymlFile)
-        # db.rcf = rcf
+            ymlContents['observations'][ tracer][filekey]['path'], 
+            start=starts, 
+            end=ends, 
+            bFromCPortal=True, 
+            ymlContents=ymlContents, 
+            ymlFile=ymlFile, 
+            tracer=tracer)
 
-        # if (1>2):  # TODO: check. should not be needed
         # Rename fields, if required by the config file or dict:
         # the config file can have a key "observations.file.rename: col1:col2". In this case, the column "col1" will be renamed in "col2".
         # this can also be a list of columns: "observations.file.rename: [col1:col2, colX:colY]"
@@ -73,48 +71,64 @@ class obsdb(obsdb):
         # if not read from carbon portal, then this renaming happens later and 
         # thus should not be done here: lumia.obsdb.InversionDb:from_rc:51
 
-        # If no "tracer" column in the observations file, it can also be provided through the rc-file (observations.file.tracer key)
+        # If there is no "tracer" column in the observations file, it can also be provided through the rc-file (observations.file.tracer key)
         if "tracer" not in db.observations.columns:
             # TODO: the whole obsdata file reading needs to be reviewed in case we deal with 2 or more tracers. All this mumble
-            # jumble code has only been tested for one tracer. However, in order to read rcf['observations'][tracer][filekey]['tracer'] we 
+            # jumble code has only been tested for one tracer. However, in order to read ymlContents['observations'][tracer][filekey]['tracer'] we 
             # require prior knowledge of said tracer in order to read that key.... and thus the tracer name really needs to be handed down 
             # from the calling function. For now, a hot fix picking the first tracer just so it works at least with one tracer
-            tracer=hk.getTracer(rcf['run']['tracers'])
+            tracer=hk.getTracer(ymlContents['run']['tracers'])
             #logger.warning(f'No "tracer" column provided. Attributing all observations to tracer {tracer}')
             db.observations.loc[:, 'tracer'] = tracer
         logger.debug(f'from_CPortal() completed successfully. Return value is db={db}')
         return db
  
  
-    def load_fromCPortal(self, rcf=None, useGui: bool = False, ymlFile: str=None) -> "obsdb":
+    def load_fromCPortal(self, ymlContents=None, ymlFile: str=None) -> "obsdb":
         """
         Public method  load_fromCPortal
 
-        @param rcf name of the rc or yaml resource file. Usually taken from self (defaults to None)
-        @type RCF (optional)
+        @param ymlContents is a yml dict containing the contents of the yaml resource file. Usually taken from self (defaults to None)
+        @type yamlDict (optional)
         
         Description: 1st step: Read all dry mole fraction files from all available records on the carbon portal
          - these obviously have no background co2 concentration values (which need to be provided by other means)
         """
-        (self, obsDf,  obsFile)=self.gatherObs_fromCPortal(rcf, useGui, ymlFile)
+        (self, obsDf,  obsFile)=self.gatherObs_fromCPortal(ymlContents, ymlFile)
         # all matching data was written to the obsFile
         
-        # Read the file that has the background co2 concentrations
-        # TODO: This needs to be changed to file name pattern and YEAR
-        bgFname=self.rcf['background']['concentrations']['co2']['backgroundCo2File']
-        (bgDf, bInterpolationRequired)=self.load_background(bgFname)
+        # Read the file(s) or pattern that has the background co2 concentrations
+        tracer=hk.getTracer(ymlContents['run']['tracers'])
+        bgFnameLst=[]
+        try:
+            bgFnameEntry=self.ymlContents['background']['concentrations'][tracer]['backgroundFiles']
+        except:
+            try:
+                bgFnameEntry=self.ymlContents['background']['concentrations'][tracer]['backgroundFile']
+            except:
+                try:
+                    bgFnameEntry=self.ymlContents['background']['concentrations'][tracer]['backgroundCo2File']
+                except:
+                    logger.error(f'Unable to read background concentrations entries from yaml config file key background.concentrations.{tracer}.backgroundFile/s/backgroundCo2File. ')
+        if (isinstance(bgFnameEntry, str)):
+            if('*' in bgFnameEntry):
+                bgFnameLst = glob.glob(bgFnameEntry)
+            else:
+                bgFnameLst.append(bgFnameEntry)
+        else:
+            bgFnameLst =bgFnameEntry
+        for bgFname in bgFnameLst:
+            (bgDf, bInterpolationRequired)=self.load_background(bgFname)
         # Now we have to merge the background CO2 concentrations into the observational data...
-        # sNow=self.rcf[ 'run']['thisRun']['uniqueIdentifierDateTime']
         (mergedDf)=self.combineObsAndBgnd(obsDf,  bgDf,  bInterpolationRequired)
         setattr(self,'observations', mergedDf)
-        # filename="observations.tar.gz"
-        self.filename = bgFname # filename
+        self.filename = bgFname 
         logger.info("Observed and background concentrations of CO2 have been read and merged successfully.")
         # Then we should be able to continue as usual...i.e. like in the case of reading a prepared local obs+background data set.
         logger.debug('load_fromCPortal() completed successfully.')
         return(self)
         
-    def gatherObs_fromCPortal(self, rcf=None, useGui: bool = False, ymlFile: str=None,  errorEstimate=None) -> "obsdb":
+    def gatherObs_fromCPortal(self, ymlContents=None, ymlFile: str=None,  errorEstimate=None) -> "obsdb":
        # TODO: ·errorEstimate: it may be better to set this to be calculated dynamically in the yml file by setting the
        # 'optimize.observations.uncertainty.type' key to 'dyn' (setup_uncertainties in ui/main_functions.py, ~L.174) 
        # The value actually matters, in some cases: it can be used as a value for the weekly uncertainty, or for the default 
@@ -122,52 +136,33 @@ class obsdb(obsdb):
        # "lumia.obsdb.InversionDb.obsdb.setup_uncertainties_weekly" methods). But it's not something you can retrieve 
        # from the observations themselves (it accounts for model uncertainty as well, to a degree), so it's more of a user settings. 
         bPrintProgress=True
-        self.rcf = rcf
+        self.ymlContents = ymlContents
         CrudeErrorEstimate="1.5" # 1.5 ppm
-        timeStep=self.rcf['run']['time']['timestep']
-        tracer=hk.getTracer(rcf['run']['tracers'])
-        # sLocation=rcf['observations'][tracer]['file']['location']
-        # if ('CARBONPORTAL' in sLocation):
-        # We need to provide the contents of "observations.csv" and "sites.csv". "files.csv" is (always) empty - thus unimportant - and so is the data frame resulting from it.
-        # bFromCarbonportal=True
+        timeStep=self.ymlContents['run']['time']['timestep']
+        tracer=hk.getTracer(ymlContents['run']['tracers'])
         bFirstDf=True
         nDataSets=0
         # we attempt to locate and read the tracer observations directly from the carbon portal - given that this code is meant to be executed on the carbon portal itself
         # discoverObservationsOnCarbonPortal(sKeyword=None, tracer='CO2', pdTimeStart=None, pdTimeEnd=None, year=0,  sDataType=None,  iVerbosityLv=1)
         # cpDir=/data/dataAppStorage/asciiAtcProductTimeSer/
-        # cpDir=rcf['observations'][tracer]['file']['cpDir']
-        #remapObsDict=rcf['observations'][tracer]['file']['renameCpObs']
-        #if self.start is None:
-        sStart=self.rcf['observations']['start']    # should be a string like start: '2018-01-01 00:00:00' 
-        sEnd=self.rcf['observations']['end']
+        # cpDir=ymlContents['observations'][tracer]['file']['cpDir']
+        #remapObsDict=ymlContents['observations'][tracer]['file']['renameCpObs']
+        (sStart, bUseMachine)=hk.getStartEnd(ymlContents, 'start')
+        (sEnd,  bUseMachine)=hk.getStartEnd(ymlContents, 'end')
         nNoTempCov=0
-        #print(f'sStart={sStart},  sEnd={sEnd} which are of type ',  flush=True)
-        #print(type(sStart),  flush=True)
-        pdTimeStart=bs.getPdTime(sStart)
-        pdTimeEnd=bs.getPdTime(sEnd)
         pdSliceStartTime=bs.getPdTime(sStart) #,  tzUT=True)
         pdSliceEndTime=bs.getPdTime(sEnd) #,  tzUT=True)
         # create a datetime64 version of these so we can extract the time interval needed from the pandas data frame
-        sNow=self.rcf[ 'run']['thisRun']['uniqueIdentifierDateTime']
-        sOutputPrfx=self.rcf[ 'run']['thisRun']['uniqueOutputPrefix']
-        sTmpPrfx=self.rcf[ 'run']['thisRun']['uniqueTmpPrefix']
-        selectedObsFile=self.rcf['observations'][tracer]['file']['selectedObsData']
-        if(self.rcf['observations'][tracer]['file']['discoverData']):
-            # Only if LumiaGUI was not run beforehand should Lumia go and hunt itself for the data on the carbon portal
-            (dobjLst, selectedDobjLst, dfObsDataInfo, fDiscoveredObservations, badPidsLst)=discoverObservationsOnCarbonPortal(tracer='CO2',  
-                        pdTimeStart=pdTimeStart, pdTimeEnd=pdTimeEnd, timeStep=timeStep,  ymlContents=rcf,  sDataType=None, iVerbosityLv=1)
-            (selectedDobjLst, dfObsDataInfo)=chooseAmongDiscoveredObservations(bWithGui=useGui, tracer='CO2', ValidObs=dfObsDataInfo, 
-                                                                ymlFile=ymlFile, fDiscoveredObservations=fDiscoveredObservations, sNow=sNow, selectedObsFile=selectedObsFile,  iVerbosityLv=1)
-            self.rcf['observations'][tracer]['file']['selectedPIDs'] = selectedDobjLst    
-        else:
-            # use what LumiaGUI has prepared for us
-            dobjLstFile=self.rcf['observations'][tracer]['file']['selectedPIDs']
-            with open(dobjLstFile) as file:
-               selectedDobjLst = [line.rstrip() for line in file]
+        sOutputPrfx=self.ymlContents[ 'run']['thisRun']['uniqueOutputPrefix']
+        sTmpPrfx=self.ymlContents[ 'run']['thisRun']['uniqueTmpPrefix']
+        #selectedObsFile=self.ymlContents['observations'][tracer]['file']['selectedObsData']
+        dobjLstFile=self.ymlContents['observations'][tracer]['file']['selectedPIDs']
+        with open(dobjLstFile) as file:
+           selectedDobjLst = [line.rstrip() for line in file]
         # read the observational data from all the files in the dobjLst. These are of type ICOS ATC time series
         if((selectedDobjLst is None) or (len(selectedDobjLst)<1)):
             logger.error("Fatal Error! ABORT! dobjLst is empty. We did not find any dry-mole-fraction tracer observations on the carbon portal. We need a human to fix this...")
-            sys.exit(-1)
+            sys.exit(-201)
         nBadies=0
         nGoodPIDs=0
         nTotal=0
@@ -186,7 +181,7 @@ class obsdb(obsdb):
             (mdata, icosMetaOk)=myCarbonPortalTools.getMetaDataFromPid_via_icoscp_core(pid)
             if(mdata is None):
                 logger.error(f'Failed: Obtaining the metadata for data object {url} was unsuccessful. Thus this data set cannot be used.')
-            if(mdata is None):
+            #if(mdata is None):
                 metaDataRetrieved=False
             if(icosMetaOk):
                 icoscpMetaOk='   yes'
@@ -232,9 +227,9 @@ class obsdb(obsdb):
                 logger.info(f"pidUrl={pidUrl}")
                 dobjMeta = iccMeta.get_dobj_meta(pidUrl)
                 #logger.debug(f'dobjMeta={dobjMeta}')
-                logger.info('dobjMeta data retrieved successfully.')
+                logger.debug('dobjMeta data retrieved successfully.')
                 dobj_arrays = iccData.get_columns_as_arrays(dobjMeta)
-                logger.info('dobj_arrays data retrieved successfully.')
+                logger.debug('dobj_arrays data retrieved successfully.')
                 # logger.debug(f'dobj_arrays={dobj_arrays}')
                 obsData1site = DataFrame(dobj_arrays)
                 #obsData1site.iloc[:512, :].to_csv(sTmpPrfx+'_dbg_icc_'+pid+'-obsData1site-obsPortalDbL188.csv', mode='w', sep=',')
@@ -330,11 +325,11 @@ class obsdb(obsdb):
                     # Hence I decided to mimic the behaviour of a local observations.tar.gz file
                     # However, that said, invdb.setupUncertainties() later in the game replaces the contents of 'err' with the total error from all sources 
                     # of uncertainties. Therefore perhaps it is best to have that column twice with both names - at least until I fully understand what is actually going on.
-                    absErrEst=self.rcf['observations']['uncertainty']['systematicErrEstim']
+                    absErrEst=self.ymlContents['observations']['uncertainty']['systematicErrEstim']
                     logger.info(f"User provided estimate of the absolute uncertainty of the observations including systematic errors is {absErrEst} percent.")
                     # To avoid really bad things from happening where we have an observed CO2 concentration but no value for stddev: estimate a conservative value
                     obsData1siteTimed['stddev'] = obsData1siteTimed['stddev'].fillna(1.0) # 1ppm should get me in the ballpark. Stddev is understood to be an absolute error in ppm not percent
-                    obsData1siteTimed.loc[:,'err_obs']=obsData1siteTimed.loc[:,'stddev']+(self.rcf['observations']['uncertainty']['systematicErrEstim'])*obsData1siteTimed.loc[:,'obs']*0.01 
+                    obsData1siteTimed.loc[:,'err_obs']=obsData1siteTimed.loc[:,'stddev']+(self.ymlContents['observations']['uncertainty']['systematicErrEstim'])*obsData1siteTimed.loc[:,'obs']*0.01 
                     obsData1siteTimed.loc[:,'err']=obsData1siteTimed.loc[:,'err_obs'] 
                     # Parameters like site-code, latitude, longitude, elevation, and sampling height are not present as data columns, but can be
                     # extracted from the header, which really is written as a comment. Thus the following columns need to be created:
@@ -365,7 +360,7 @@ class obsdb(obsdb):
                                 mulfac=mulfac *1000
                         obsData1siteTimed['obs'] = obsData1siteTimed['obs'].astype(float).multiply(mulfac,axis = 'index')     
                         obsData1siteTimed['stddev'] = obsData1siteTimed['stddev'].astype(float).multiply(mulfac,axis = 'index')
-                        logger.info(f"Observational data for chosen tracer read successfully: PID={pid} station={SiteID},  StationName={sFullStationName}, located at station latitude={fLatitude},  longitude={fLongitude},  stationAltitude={fStationAltitude},  samplingHeight={fSamplingHeight}")
+                        logger.info(f"Observational data for chosen tracer {tracer} read successfully: PID={pid} station={SiteID},  StationName={sFullStationName}, located at station latitude={fLatitude},  longitude={fLongitude},  stationAltitude={fStationAltitude},  samplingHeight={fSamplingHeight}")
                         # and the Time format has to change from "2018-01-02 15:00:00" to "20180102150000"
                         # Note that the ['TIMESTAMP'] column is a pandas.series at this stage, not a Timestamp nor a string
                         # I tried to pull my hair out converting the series into a timestamp object or similar and format the output,
@@ -504,15 +499,13 @@ class obsdb(obsdb):
         print("obsDf.index=",  flush=True)
         print(obsDf.index,  flush=True)
         obsDf.info() # is a timezone-naive datetime[64] data type
-        sTmpPrfx=self.rcf[ 'run']['thisRun']['uniqueTmpPrefix']
-        sOutputPrfx=self.rcf[ 'run']['thisRun']['uniqueOutputPrefix']
+        sTmpPrfx=self.ymlContents[ 'run']['thisRun']['uniqueTmpPrefix']
+        sOutputPrfx=self.ymlContents[ 'run']['thisRun']['uniqueOutputPrefix']
 
         xBgDf = bgDf[['code', 'time', 'background']].copy()  # turns time into an integer it seems....
         xBgDf.to_csv(sTmpPrfx+'_dbg_xBgDf.csv', encoding='utf-8', mode='w', sep=',')
-        # # obsDf['time'] = to_datetime(obsDf['time'], format='%Y%m%d%H%M%S', utc = True)  # confirmed: 'time' is Timestamp type after this operation
         # obsDf['time'] = to_datetime(obsDf['time'], yearfirst=True, utc = True)  # confirmed: 'time' is Timestamp type after this operation
         # xBgDf['time'] = to_datetime(xBgDf['time'], yearfirst=True, utc = True)  # confirmed: 'time' is Timestamp type after this operation
-        # # xBgDf['time'] = to_datetime(xBgDf['time'], format='%Y%m%d%H%M%S', utc = True)  # confirmed: 'time' is Timestamp type after this operation
 
         # xBgDf = bgDf[['code', 'time', 'background']].copy()  # turns time into an integer it seems....
         print("xBgDf.info()=",  flush=True)
@@ -572,7 +565,7 @@ class obsdb(obsdb):
         nRemaining=len(dfGoodBgValuesOnly)
         nDroppedBgRows=nTotal - nRemaining - nDroppedObsRows
         if(nDroppedBgRows > 0):
-            whatToDo= 'DAILYMEAN' # 'DAILYMEAN' # self.rcf.rcfGet('background.concentrations.co2.stationWithoutBackgroundConcentration')
+            whatToDo= 'DAILYMEAN' # 'DAILYMEAN' # self.ymlContents('background.concentrations.co2.stationWithoutBackgroundConcentration')
             if(whatToDo=='DAILYMEAN'):
                 dfDailyMeans = dfGoodBgValuesOnly[['time','background']].resample('D', on='time').mean()
                 # dfDailyMeans.rename(columns={'background':'dMeanBackground'}, inplace=True)
@@ -595,7 +588,11 @@ class obsdb(obsdb):
                 logger.info(f"Filled {nDroppedBgRows} rows with daily-mean values of the background co2 concentration across all valid sites. {nRemaining} good rows are remaining")
             elif(whatToDo=='FIXED'):
                 # replace background CO2 concentration values that are missing with the fixed user-provided estimate of the background co2 concentrations
-                EstimatedBgConcentration=410.0 # float(self.rcf.rcfGet('background.concentrations.co2.userProvidedBackgroundConcentration'))
+                try:
+                    tracer=hk.getTracer(self.ymlContents['run']['tracers'])
+                    self.ymlContents['background']['concentrations'][tracer]['userProvidedBackgroundConcentration']
+                except:
+                    EstimatedBgConcentration=410.0 
                 if(EstimatedBgConcentration<330.0):
                     logger.error(f'The user provided value for background.concentrations.co2.userProvidedBackgroundConcentration={EstimatedBgConcentration} is <330ppm,  which seems unreasonable. Please review you yml configuration file.')
                 if(EstimatedBgConcentration>500.0):
@@ -639,13 +636,13 @@ class obsdb(obsdb):
         #     concentrations :
         #       stationWithoutBackgroundConcentration : DROP   # DROP or exclude station, user-provided FIXED estimate, DAILYMEAN across all other stations
         #       userProvidedBackgroundConcentration : 410 # ppm - only used if stationWithoutBackgroundConcentration==FIXED
-        whatToDo=self.rcf.rcfGet('background.concentrations.co2.stationWithoutBackgroundConcentration')
+        whatToDo=self.ymlContents('background.concentrations.co2.stationWithoutBackgroundConcentration')
         if(whatToDo=='DAILYMEAN'):
-            meanValue=411.0
             obsDfWthBg.fillna(meanValue)
         if(whatToDo=='FIXED'):
+            meanValue=self.ymlContents['background']['concentrations'][tracer]['userProvidedBackgroundConcentration'] # 411.0
             # replace background CO2 concentration values that are missing with the fixed user-provided estimate of the background co2 concentrations
-            EstimatedBgConcentration=float(self.rcf.rcfGet('background.concentrations.co2.userProvidedBackgroundConcentration'))
+            EstimatedBgConcentration=float(self.ymlContents['background']['concentrations'][tracer]['userProvidedBackgroundConcentration'])
             if(EstimatedBgConcentration<330.0):
                 logger.error(f'The user provided value for background.concentrations.co2.userProvidedBackgroundConcentration={EstimatedBgConcentration} is <330ppm,  which seems unreasonable. Please review you yml configuration file.')
             if(EstimatedBgConcentration>500.0):
@@ -688,7 +685,10 @@ class obsdb(obsdb):
                     else:
                         bgFnames.append(ncFname)
                         bInterpolationRequired=True
-                ds = xr.open_mfdataset(bgFnames)
+                if (len(bgFnames)>1):
+                    ds = xr.open_mfdataset(bgFnames, concat_dim=[..., None, ...]) # , combine=
+                else:
+                    ds = xr.open_dataset(bgFnames[0])
                 bgDf = ds.to_dataframe()
                 # print("bgDf.columns=",  flush=True)
                 # print(bgDf.columns,  flush=True)
@@ -711,11 +711,11 @@ class obsdb(obsdb):
                 bgDf = bgDf[bgDf['field'] == 'mix_background']
                 if (len(bgDf.index) < 99) :
                     try:
-                        colRename=self.rcf['background']['concentrations']['co2']['rename']
+                        colRename=self.ymlContents['background']['concentrations']['co2']['rename']
                         bgDf = bgDf[bgDf['field'] == colRename]
                     except:
                         logger.error(f"Abort! The co2 background concentrations file {bgFname} seems to have no valid background concentrations or uses a non-recognised name.")
-                        sys.exit(-1)
+                        sys.exit(-202)
                 bgDf.to_csv('./backgroundCo2Concentrations/background_2018-1.csv', encoding='utf-8', mode='w', sep=',', float_format="%.5f")
                 # 	time	                            field	                    bik	            bir	            bsd	            cbw	            cgr	            cmn	            dec	            dig	gat	hei	hel	hpb	htm	hun	ipr	jfj	kas	kit	kre	lin	lmp	lmp_wdcgg	lmu	lut	nor	ope	oxk	pal	prs	puy	rgl	sac	smr	snb	ssl	ste	svb	tac	toh	trn	uto	wao	zsf
                 # 1, 2018-01-01 00:30:00,mix_background,410.99988,410.38451,411.66074,410.82046,409.35623,408.91705,409.44143,410.79327,409.39662,409.35538,410.23275,409.33394,409.46179,410.58845,409.18821,409.48239,408.79192,409.38533,409.53914,408.85297,409.46583,409.46583,410.09292,410.52195,411.03353,410.21645,409.42688,412.00559,409.43838,411.02189,411.84737,411.12235,413.99581,408.70579,409.83367,409.93449,411.84127,411.52936,409.80963,411.04295,411.56516,411.51942,409.25460
@@ -734,7 +734,7 @@ class obsdb(obsdb):
                         counter+=1
                 if(counter==0):
                     logger.error(f"Abort! The co2 background concentrations file {bgFname} seems to have no valid data or site codes.")
-                    sys.exit(-1)
+                    sys.exit(-203)
                 trspBgDf.rename(columns={'field':'code'}, inplace=True)
                 # obsDf['time'] = to_datetime(obsDf['time'], format='%Y%m%d%H%M%S', utc = True)  # confirmed: 'time' is Timestamp type after this operation
                 # Using 'yearfirst=True' is the better option in case the time column already contains a series or time object and not an integer as assumed above.
@@ -753,27 +753,27 @@ class obsdb(obsdb):
                 # bgDf.to_csv('./backgroundCo2Concentrations/background_2018a.csv', encoding='utf-8', mode='w', sep=',', float_format="%.5f")
                 colRename=""
                 try:
-                    colRename=self.rcf['background']['concentrations']['co2']['rename']
+                    colRename=self.ymlContents['background']['concentrations']['co2']['rename']
                     if colRename in bgDf.columns :
                         bgDf.rename(columns={colRename:'background'}, inplace=True)
                 except:
                     if (('mix_background' not in bgDf.columns) and ('background' not in bgDf.columns)) :
                         logger.error(f"Abort! The user provided co2 background concentrations file {bgFname} does not contain a column named {colRename} or background. Please review also the value of the >>background:concentrations:co2:rename<< key in your yaml file.")
-                        sys.exit(-1)
+                        sys.exit(-204)
             else:
                 logger.error(f"Abort! Unsupported data format for co2 background concentrations (file {bgFname}). That file should be in .csv format (which may be inside a .tar or .tar.gz archive) or a netcdf file terminating in YYYY.nc and contain a column named background")
-                sys.exit(-1)
+                sys.exit(-205)
         except:
-            logger.error(f"Abort! Unable to read co2 background concentrations from file {bgFname}. That file should be in .csv format (which may be inside a .tar or .tar.gz archive) or a netcdf file terminating in YYYY.nc")
-            sys.exit(-1)
+            logger.error(f"Abort! Unable to read co2 background concentrations from file {bgFname}. That file should be in .csv format (which may be inside a .tar or .tar.gz archive) or a netcdf file terminating in YYYY.nc.")
+            sys.exit(-206)
         if ('background' not in bgDf.columns) :
             logger.error("Abort! The user provided co2 background concentrations file {bgFname} does not contain a column named background. Please review also the value of the >>background:concentrations:co2:rename<< key in your yaml file.")
-            sys.exit(-1)
+            sys.exit(-207)
         return(bgDf, bInterpolationRequired)
 
 
     def setup_uncertainties(self, *args, **kwargs):
-        errtype = self.rcf.rcfGet('observations.uncertainty.frequency')
+        errtype = self.ymlContents['observations']['uncertainty']['frequency']
         if errtype == 'weekly':
             self.setup_uncertainties_weekly()
         elif errtype == 'cst':
@@ -787,9 +787,9 @@ class obsdb(obsdb):
 
     def setup_uncertainties_weekly(self):
         res = []
-        # if 'observations.uncertainty.default_weekly_error' in self.rcf.keys :  TODO: TypeError: self.rcf.keys  is not iterable
+        # if 'observations.uncertainty.default_weekly_error' in self.ymlContents.keys :  TODO: TypeError: self.ymlContents.keys  is not iterable
         if (1==1):
-            default_error = self.rcf.rcfGet('observations.uncertainty.default_weekly_error')
+            default_error = self.ymlContents['observations']['uncertainty']['default_weekly_error'] 
             if 'err' not in self.sites.columns :
                 self.sites.loc[:, 'err'] = default_error
                 

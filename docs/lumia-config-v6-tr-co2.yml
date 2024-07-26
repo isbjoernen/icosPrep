@@ -1,12 +1,17 @@
 background:
   concentrations:
     co2:
-      backgroundCo2File: ./backgroundCo2Concentrations/background_2018.nc
+      backgroundFiles: ./backgroundCo2Concentrations/background_2018.nc
+      localFiles:
+      - ./backgroundCo2Concentrations/background_2018.nc
+      location: LOCAL
       rename: mix_background
+      sha256Values:
+      - a8aa37dc87a38572c24065c908762fd0e3e7a449536c18305b2808c6ad29701b
       stationWithoutBackgroundConcentration: DAILYMEAN
       userProvidedBackgroundConcentration: 410
 congrad:
-  communication_file: ./tmp/LumiaGUI-2024-02-27T01_02/LumiaGUI-2024-02-27T01_02-congrad.nc
+  communication_file: ./tmp/LumiaGUI-2024-07-12T09_23/LumiaGUI-2024-07-12T09_23-congrad.nc
   executable: ${lumiacode.homedir}/src/congrad/congrad.exe
   gradient_norm_reduction: 1.e12
   max_number_of_iterations: 128
@@ -22,12 +27,14 @@ emissions:
       biosphere:
         error_min: 0
         is_ocean: false
+        localFile: NotApplicable
         origin: VPRM
         tcorr: ${optimize.emissions.co2.biosphere.temporal_correlation}
         unit: PgC
       fossil:
         error_min: 0
         is_ocean: false
+        localFile: NotApplicable
         optimize: false
         origin: EDGARv4_LATEST
         tcorr: ${optimize.emissions.co2.fossil.temporal_correlation}
@@ -35,8 +42,13 @@ emissions:
       ocean:
         error_min: 0
         is_ocean: true
+        localFile: /home/cec-ami/nateko/data/fluxes/nc/eurocom025x025/1h/flux_co2.mikaloff01.2018.nc
+        localFiles:
+        - ./fluxes/nc/eurocom025x025/1h/flux_co2.mikaloff01.2018.nc
         optimize: false
         origin: mikaloff01
+        sha256Value:
+        - 7a54cc113d12652d93747ac2d2cbc74c34ec2bdaa31f17e5c92e15ee2106b0bc
         tcorr: ${optimize.emissions.co2.ocean.temporal_correlation}
         unit: PgC
     interval: ${run.time.timestep}
@@ -53,8 +65,10 @@ emissions:
 emissions.*.error_structure: linear
 lumiacode:
   homedir: /home/arndt/nateko/dev/lumia/lumiaDA/lumia
+machineChosen: UNKNOWN
 model:
   exec: ${lumiacode.homedir}/transport/multitracer.py
+  executable: ${lumia:transport/multitracer.py}
   options:
     serial: false
   output:
@@ -65,6 +79,8 @@ model:
     footprints: ${run.paths.footprints}
     output: ${run.paths.output}
     temp: ${run.paths.temp}
+  path_output: ${machine.output}
+  path_temp: ${machine.temp}
   transport:
     exec:
       exec: /lumia/transport/multitracer.py
@@ -72,10 +88,10 @@ model:
 observations:
   co2:
     file:
-      dicoveredObsData: ./output/LumiaGUI-2024-05-14T15_22/LumiaGUI-2024-05-14T15_22-DiscoveredObservations-co2.csv #./output/LumiaGUI-2024-02-27T01_02/LumiaGUI-2024-02-26T10_30-DiscoveredObservations.csv
+      dicoveredObsData: ./output/icosPrep-2024-07-19T00_24/LumiaGUI-2024-07-04T23_21-DiscoveredObservations-co2.csv
       discoverData: false
       location: CARBONPORTAL
-      path: observations.tar.gz
+      path: /home/cec-ami/nateko/data/icos/DICE/observations-test.csv
       ranking:
       - ObsPack
       - Level2
@@ -83,8 +99,9 @@ observations:
       - NRT
       - AnyOther
       rename: background:mix_background
-      selectedObsData: ./output/LumiaGUI-2024-05-14T15_22/LumiaGUI-2024-05-14T15_22-selected-ObsData-co2.csv
-      selectedPIDs: ./output/LumiaGUI-2024-05-14T15_22/LumiaGUI-2024-05-14T15_22-selected-PIDs-co2.csv
+      selectedObsData: ./output/icosPrep-2024-07-19T01_52/icosPrep-2024-07-19T01_52-selected-ObsData-co2.csv
+      selectedPIDs: ./output/icosPrep-2024-07-19T01_52/icosPrep-2024-07-19T01_52-selected-PIDs-co2.csv
+      sha256Value: NotApplicable
       tracer: co2
     units: ppm
   end: ${run.time.end}
@@ -140,11 +157,12 @@ region: ${run.region}
 run:
   grid: ${Grid:{lon0:-15.000,lat0:33.000,lon1:35.000,lat1:73.000,dlon:0.25000, dlat:0.25000}}
   gridname: eurocom025x025
+  ncores: 1
   paths:
     data: .
     footprints: /home/arndt/nateko/data/icos/DICE/footprints
-    output: ./output
-    temp: ./tmp
+    output: ./output/icosPrep-2024-07-19T01_52
+    temp: ./tmp/icosPrep-2024-07-19T01_52
   region:
     dlat: 0.25
     dlon: 0.25
@@ -153,13 +171,17 @@ run:
     lon0: -15.0
     lon1: 35.0
   thisRun:
-    PythonVersion: Python environment version is Python 3.10.10
+    PythonVersion: Python environment version is 3.11.9
     hostName: tux.nateko.lu.se
-    platformCore: Linux-5.15.0-97-generic-x86_64-with-glibc2.35
-    platformFlavour: 07-Ubuntu SMP Wed Feb 7 13:26:48 UTC 202
-    uniqueIdentifierDateTime: 2024-02-27T01_02
-    uniqueOutputPrefix: ./output/LumiaGUI-2024-02-27T01_02/LumiaGUI-2024-02-27T01_02-
-    uniqueTmpPrefix: ./tmp/LumiaGUI-2024-02-27T01_02/LumiaGUI-2024-02-27T01_02-
+    platformArchitecture: x86_64
+    platformCore: Linux-5.15.0-116-generic-x86_64-with-glibc2.35
+    platformFlavour: 126-Ubuntu SMP Mon Jul 1 10:14:24 UTC 2024
+    platformName: Ubuntu
+    platformPrettyName: Ubuntu 22.04.4 LTS
+    platformVersion: '22.04'
+    uniqueIdentifierDateTime: 2024-07-19T01_52
+    uniqueOutputPrefix: ./output/icosPrep-2024-07-19T01_52/icosPrep-2024-07-19T01_52-
+    uniqueTmpPrefix: ./tmp/icosPrep-2024-07-19T01_52/icosPrep-2024-07-19T01_52-
     username: cec-ami
   time:
     end: '2018-02-01 23:59:59'
@@ -168,31 +190,37 @@ run:
   tracers:
   - co2
 softwareUsed:
-  lumia:
-    branch: gitkraken://repolink/778bf0763fae9fad55be85dde4b42613835a3528/branch/LumiaDA?url=git%40github.com%3Alumia-dev%2Flumia.git
-    commit: gitkraken://repolink/778bf0763fae9fad55be85dde4b42613835a3528/commit/5e5e9777a227631d6ceeba4fd8cff9b241c55de1?url=git%40github.com%3Alumia-dev%2Flumia.git
+  icosPrep:
     git:
-      branch: LumiaGUI
-      commit: 0879c961b148ae7ed45127560b19d56656689f74
-      location: git@github.com:lumia-dev/lumia/commit/0879c961b148ae7ed45127560b19d56656689f74
+      activeScript: /home/cec-ami/nateko/dev/py/icosPrep/icosPrep/dataHunting/dataHunter.py
+      branch: main
+      commit: 1534761fc1c0ee0b5fd5e5338f00f91dc0a5509a
+      location: https://github.com/isbjoernen/icosPrep/commit/1534761fc1c0ee0b5fd5e5338f00f91dc0a5509a
+      lumiaFlavour: icosPrep
+      url: https://github.com/isbjoernen/icosPrep.git
+  lumia:
+    git:
+      branch: main
+      commit: c57381a002519572f400a88f22ed651df92965c0
+      location: git@github.com:lumia-dev/lumia/commit/c57381a002519572f400a88f22ed651df92965c0
+      lumiaFlavour: icosPrep
+      mainScript: /home/cec-ami/nateko/dev/py/icosPrep/icosPrep/dataHunting/dataHunter.py
       url: git@github.com:lumia-dev/lumia.git
   runflex:
-    branch: gitkraken://repolink/b9411fbf7aeeb54d7bb34331a98e2cc0b6db9d5f/branch/v2?url=https%3A%2F%2Fgithub.com%2Flumia-dev%2Frunflex.git
-    commit: gitkraken://repolink/b9411fbf7aeeb54d7bb34331a98e2cc0b6db9d5f/commit/aad612b36a247046120bda30c8837acb5dec4f26?url=https%3A%2F%2Fgithub.com%2Flumia-dev%2Frunflex.git
     git:
       branch: v2
-      commit: aad612b36a247046120bda30c8837acb5dec4f26
-      location: git@github.com:lumia-dev/runflex/commit/aad612b36a247046120bda30c8837acb5dec4f26
+      commit: 9ef682d69e32fdfd1e1c23e742149c6268b8715a
+      location: git@github.com:lumia-dev/runflex/commit/9ef682d69e32fdfd1e1c23e742149c6268b8715a
       url: git@github.com:lumia-dev/runflex.git
 tag: ''
 thisConfigFile:
   dataformat:
-    subversion: 2
+    subversion: 3
     version: 6
 transport:
   output: T
   steps: forward
 var4d:
   communication:
-    file: ./tmp/LumiaGUI-2024-02-27T01_02/LumiaGUI-2024-02-27T01_02-congrad.nc
+    file: ./tmp/LumiaGUI-2024-07-12T09_23/LumiaGUI-2024-07-12T09_23-congrad.nc
   max_iter: 333

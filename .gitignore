@@ -21,7 +21,7 @@ dist/
 .jedi/*
 
 *.simg
-
+*_old.py
 
 mkdocs.yml
 src/dataHunting/output/

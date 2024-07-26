@@ -3,6 +3,7 @@
 #!pip install screeninfo
 #!pip install git+https://github.com/ecederstrand/exchangelib
 #! python --version
+#!pip install -e .
 
 from importlib import reload
 import ipywidgets as wdg

@@ -80,7 +80,7 @@ def getTimeForSparqlQuery(pdTime,  startOrEndTime=None,  timeStep=None):
   '''
     if((pdTime is None) or (startOrEndTime is None)):
         logger.error('Start date of observation interval or startOrEndTime operator not provided.')
-        sys.exit(-1)
+        sys.exit(-308)
     if('start' in startOrEndTime):
         operation='subtractTime'
     else:
@@ -271,7 +271,7 @@ def extractFnamesFromDobj(dobj, cpDir=None, iVerbosityLv=1):
                                 fNameLst.append(sPID)
                             except:
                                 logger.error('The file '+sFileNameOnCarbonPortal+' cannot be read or does not exist on the Carbon Portal or you are not running this script on the Carbon Portal. Please check first of all the directory you provided for observations.file.cpDir in your .yml resource file.')
-                                # sys.exit(-1)   /data/dataAppStorage/asciiAtcProductTimeSer/ZZb1E_dJQtRICzobwg0ib86C
+                                # sys.exit(-301)   /data/dataAppStorage/asciiAtcProductTimeSer/ZZb1E_dJQtRICzobwg0ib86C
     except:
         logger.error("No valid observational data found in SPARQL query dobj=")
         logger.error(f"{dobj}")

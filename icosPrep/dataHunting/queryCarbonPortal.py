@@ -3,26 +3,32 @@
 
 
 import sys
-import os
+#import os
 import re
 import datetime
-import utils.housekeeping as hk
+try:
+    import utils.housekeeping as hk
+except:
+    import housekeeping as hk
 from loguru import logger
-import numpy as np
+#import numpy as np
 from pandas import DataFrame  #, concat
 # from icoscp.sparql import sparqls, runsparql
 try:
-    import dataHunting.myCarbonPortalTools
+    import dataHunting.myCarbonPortalTools as myCarbonPortalTools
 except:
-    logger.error('Failed to import lumia.GUI.myCarbonPortalTools.py')
-    sys.exit(1)
+    try:
+        import myCarbonPortalTools
+    except:
+        logger.error('Failed to import lumia.GUI.myCarbonPortalTools.py')
+        sys.exit(1)
     
 from icoscp.sparql.runsparql import RunSparql
 #from icoscp.cpb.dobj import Dobj   deprecated
 #from icoscp.dobj import Dobj     # better/newer
 from icoscp.collection import collection
-from icoscp.cpb import metadata
-from icoscp_core.icos import meta as coreMeta
+#from icoscp.cpb import metadata
+#from icoscp_core.icos import meta as coreMeta
 
 bDEBUG =False
 
@@ -80,7 +86,7 @@ def getTimeForSparqlQuery(pdTime,  startOrEndTime=None,  timeStep=None):
   '''
     if((pdTime is None) or (startOrEndTime is None)):
         logger.error('Start date of observation interval or startOrEndTime operator not provided.')
-        sys.exit(-1)
+        sys.exit(-111)
     if('start' in startOrEndTime):
         operation='subtractTime'
     else:
@@ -481,31 +487,11 @@ def discoverObservationsOnCarbonPortal(tracer='CO2', pdTimeStart: datetime=None,
 
 
 # *****************************************************************************************************************************
-def chooseAmongDiscoveredObservations(bWithGui=True, tracer='CO2', ValidObs=None, ymlFile=None, fDiscoveredObservations=None, 
+def chooseAmongDiscoveredObservations(tracer='CO2', ValidObs=None, ymlFile=None, fDiscoveredObservations=None, 
                                                                             sNow='', selectedObsFile='',   bSkipGui=False,  iVerbosityLv=1):
 # *****************************************************************************************************************************
 
     # Shall we call the GUI to tweak some parameters before we start the ball rolling?
-    if bWithGui:
-        #(updatedYmlContents) = callLumiaGUI(ymlContents, sLogCfgPath)
-        # callLumiaGUI(rcf, args.start,  args.end )
-        script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
-        sCmd ='python3 '+script_directory+'/lumia/GUI/lumiaGUI.py --step2 --DiscoveredObs='+fDiscoveredObservations
-        if (len(sNow)>16):  # LumiaDA-2024-01-20T00_52
-            sNow=sNow[:16]
-        sCmd+=' --sNow='+sNow
-        for entry in sys.argv[1:]:
-            if (len(entry)>0):
-                sCmd+=' '+entry
-        try:
-            returnValue=os.system(sCmd)
-        except:
-            logger.error(f"Calling LumiaGUI failed. {returnValue} Execution stopped.")
-            sys.exit(42)
-        logger.info("LumiaGUI window closed")
-        if(os.path.isfile("LumiaGui.stop")):
-            logger.error("The user canceled the call of Lumia or something went wrong in the Refinement GUI. Execution aborted. Lumia was not called.")
-            sys.exit(42)
     ValidObs.read_csv(selectedObsFile)
     # Read the ymlFile
     # Apply all filters found in the ymlFile

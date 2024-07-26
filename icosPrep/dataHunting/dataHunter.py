@@ -2,19 +2,22 @@
 
 import os
 import sys
-# import pathlib
-import utils.housekeeping as hk
+try:
+    import utils.housekeeping as hk
+except:
+    import housekeeping as hk
 import pandas as pd
 import argparse
 from datetime import datetime,  timedelta
-#import time
 import yaml
-#import re
 from pandas import to_datetime
 from loguru import logger
-#import _thread
-from dataHunting.queryCarbonPortal import discoverObservationsOnCarbonPortal
-import utils.boringStuff as bs
+try:
+    from dataHunting.queryCarbonPortal import discoverObservationsOnCarbonPortal
+    import utils.boringStuff as bs
+except:
+    from queryCarbonPortal import discoverObservationsOnCarbonPortal
+    import boringStuff as bs
 
 global AVAIL_LAND_NETEX_DATA  # Land/vegetation net exchange model emissions that are supported
 AVAIL_LAND_NETEX_DATA=["LPJ-GUESS","VPRM"]
@@ -111,7 +114,7 @@ def prepareCallToLumiaGUI(ymlFile,  packageRootDir, args):
     # Do the housekeeping like documenting the current git commit version of this code, date, time, user, platform etc.
     thisScript=sys.argv[0] 
     packageName='icosPrep' 
-    (ymlFile, oldDiscoveredObservations, myMachine)=hk.documentThisRun(initialYmlFile, thisScript,  packageName,  packageRootDir,  args)  # from housekeepimg.py
+    (ymlFile, oldDiscoveredObservations, myMachine, packageRootDir)=hk.documentThisRun(initialYmlFile, thisScript,  packageName,  packageRootDir,  args)  # from housekeepimg.py
     # Now the config.yml file has all the details for this particular run
 
     # remove old message files - these are only relevant if LumiaGUI is used in an automated workflow as they signal

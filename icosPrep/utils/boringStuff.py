@@ -3,7 +3,7 @@ import tkinter as tk
 try:
     import housekeeping as hk
 except:
-    import lumia.GUI.housekeeping as hk
+    import utils.housekeeping as hk
 import os
 import sys
 from loguru import logger

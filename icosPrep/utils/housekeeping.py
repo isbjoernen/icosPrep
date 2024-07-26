@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-LATESTGITCOMMIT_icosPrep='85504dc38c2725f29c03c4b07992e1892da54015'
+LATESTGITCOMMIT_icosPrep='1d0b97399f87579e523f10e5c8a9bfea4a622c7b'
 LATESTGITCOMMIT_LumiaMaster='186409332c94be3cb2c5cafe8edb578b166e11d3'
 LATESTGITCOMMIT_masterPlus='2fc00b3f9600af4cccacd7da5ce2aa6e31f01bc4'
 LATESTGITCOMMIT_LumiaDA='09957785de81f6653ca62b3cd735d114b0c660f3'
@@ -147,31 +147,54 @@ def getDictItemsFromParticularLv(myDict):
     return(keys)
 
 
+def getStartEnd(ymlContents, startEnd='start'):
+    bUseMachine=False
+    try:
+        myMachine=ymlContents['machineChosen']        
+    except:
+        myMachine='UNKNOWN'
+    try:
+        starts=ymlContents['run'] ['time'][startEnd]
+    except:
+        try:
+            starts=ymlContents['observations'][startEnd]
+        except:
+            try:
+                starts=ymlContents['time']['start']    # should be a string like start: '2018-01-01 00:00:00'
+            except:
+                starts=None
+    if((starts is not None) and (isinstance(starts, str))):
+        while(starts[0]=='$'):
+            bUseMachine=True
+            starts=expandKeyValue(starts,ymlContents, myMachine)        
+    return(starts, bUseMachine)   
+
+
 def getStartEndTimes(ymlContents, ymlFile, args, myMachine):
     # Determine start/end times - may come from commandline, else the config ymlFile
     end=None
     start=None
     bUseMachine=False
     if ((args is None) or (args.start is None)) :
-        try:            
-            start=Timestamp(ymlContents['run']['time']['start'])
-        except:
-            try:
-                start=Timestamp(ymlContents['observations']['start'])
-            except:
-                try:
-                    start=Timestamp(ymlContents['time']['start'])    # should be a string like start: '2018-01-01 00:00:00'
-                except:
-                    logger.error(f'missing key run.time.start in the user provided yaml file {ymlFile}.')  
-                logger.error(f'No valid start time found in the keys run.time.start nor observations.start nor time.start of your yml file {ymlFile}. Please fix or use the commandline option --start.')
-        if((start is not None) and (isinstance(start, str))):        
-            while(start[0]=='$'): 
-                bUseMachine=True
-                start=expandKeyValue(start ,ymlContents,myMachine)
+        (starts, bUseMachine)=getStartEnd(ymlContents, 'start')
+        if(starts is None):
+            logger.error(f'No valid start time found in the keys run.time.start nor observations.start nor time.start of your yml file {ymlFile}. Please fix or use the commandline option --start.')
+        else:
+            start=Timestamp(starts)
     else:
-        start= Timestamp(args.start)
+        end= Timestamp(args.end)
+    if ((args is None) or (args.end is None)) :
+        (ends, bUseMachine)=getStartEnd(ymlContents, 'end')
+        if(ends is None):
+            logger.error(f'No valid end time found in the keys run.time.end nor observations.end nor time.end of your yml file {ymlFile}. Please fix or use the commandline option --end.')
+        else:
+            end=Timestamp(ends)
+    else:
+        end= Timestamp(args.end)
     sStart= start.strftime('%Y-%m-%d')+' 00:00:00'
+    '''
     if ((args is None) or (args.end is None)) : 
+        end =getStartEnd(ymlContents, 'end')
         try:            
             end=Timestamp(ymlContents['run']['time']['end'])
         except:
@@ -187,6 +210,7 @@ def getStartEndTimes(ymlContents, ymlFile, args, myMachine):
                 end=expandKeyValue(end ,ymlContents,myMachine)
     else:
         end= Timestamp(args.end)
+    '''
     sEnd= end.strftime('%Y-%m-%d')+' 23:59:59'
     #ymlContents['observations']['end'] = sEnd+'%Y-%m-%d 23:59:59Z'
     #ymlContents['run']['time']['end'] = sEnd+'%Y-%m-%d 23:59:59Z'
@@ -225,7 +249,7 @@ def getTracer(ymlEntryTracer,  abortOnError=False):
             logger.warning('Proceeding with the assumption tracer==co2')
     return(tracer.lower())
 
-def handleBackgndData(ymlContents, ymlFile,  sOutputPrfx, myMachine):
+def handleBackgndData(ymlContents, ymlFile,  sOutputPrfx, myMachine,  nVers,  nSubVers,  bPrepOnly):
     # a priori background concentrations of tracer (co2, ch4).
     '''
     background:
@@ -248,33 +272,48 @@ def handleBackgndData(ymlContents, ymlFile,  sOutputPrfx, myMachine):
         bCPortal= ('CARBONPORTAL' in ymlContents['background']['concentrations'][tracer]['location']) 
     except:
         setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'background', 'concentrations' ,  tracer, 'location' ],   value='LOCAL', bNewValue=True)
+    myfile=''
     if(bCPortal):   # BgrndData is taken directly from the carbonportal with their PIDs  
         sha256Value='NotApplicable'
     else:
         try:
-            myfile=ymlContents['background']['concentrations'][tracer]['backgroundFiles']
-            while(myfile[0]=='$'): 
-                bUseMachine=True
-                myfile=expandKeyValue(myfile ,ymlContents, myMachine)
-            if(bUseMachine):
+            try:
+                myfile=ymlContents['background']['concentrations'][tracer]['backgroundFiles']
+            except:
                 try:
-                    splitty=myMachine.split('.')
-                    mMachine=splitty[-1]
-                    myfile=ymlContents['machines'][mMachine]['backgrounds']
+                    myfile=ymlContents['background']['concentrations'][tracer]['backgroundCo2File']
                 except:
-                    try:
-                        myfile=ymlContents[mMachine]['backgrounds']
-                    except:
+                    if (bPrepOnly):
+                        logger.error(f'No backgrounds file is specified in neither the background.concentrations.{tracer}.backgroundFiles nor in the {myMachine}.backgrounds key of the input yaml config file. You need to fix this before calling your inversion model.')
+                    else:
                         logger.error(f'No backgrounds file is specified in neither the background.concentrations.{tracer}.backgroundFiles nor in the {myMachine}.backgrounds key of the input yaml config file.')
-                        sys.exit(-61)
-                setKeyVal_Nested_CreateIfNecessary(ymlContents, ['background','concentrations', tracer ,'backgroundFiles'],   value= '$'+'{'+'machine.backgrounds'+'}', bNewValue=True)
+                        sys.exit(-65)
+            if(len(myfile)>1):
+                while(myfile[0]=='$'): 
+                    bUseMachine=True
+                    myfile=expandKeyValue(myfile ,ymlContents, myMachine)
+                if(bUseMachine):
+                    try:
+                        splitty=myMachine.split('.')
+                        mMachine=splitty[-1]
+                        myfile=ymlContents['machines'][mMachine]['backgrounds']
+                    except:
+                        try:
+                            myfile=ymlContents[mMachine]['backgrounds']
+                        except:
+                            logger.error(f'No backgrounds file is specified in neither the background.concentrations.{tracer}.backgroundFiles nor in the {myMachine}.backgrounds key of the input yaml config file.')
+                            if not(bPrepOnly):
+                                sys.exit(-61)
+                    setKeyVal_Nested_CreateIfNecessary(ymlContents, ['background','concentrations', tracer ,'backgroundFiles'],   value= '$'+'{'+'machine.backgrounds'+'}', bNewValue=True)
         except:
             logger.error(f'No backgrounds file is specified in neither the background.concentrations.{tracer}.backgroundFiles nor in the {myMachine}.backgrounds key of the input yaml config file.')
-            sys.exit(-62)
+            if not(bPrepOnly):
+                sys.exit(-62)
         localBgndFiles = glob.glob(myfile)
         if len(localBgndFiles) == 0:
             logger.error(f"No background concentration files matching pattern {myfile} were found.")
-            sys.exit(-63)
+            if not(bPrepOnly):
+                sys.exit(-63)
         hashValues=[]
         for localBgndFile in localBgndFiles :    
             logger.debug(f"localBgndFile={localBgndFile} ")
@@ -383,7 +422,7 @@ def  handleObsData(ymlContents, ymlFile, parentScript, lumiaFlavour, sOutputPrfx
             runSysCmd(sCmd)
 
     if(stopExecution):
-        sys.exit(-1) # you cannot call LumiaDA telling it to use a list of PIDs that you have not provided in the yml file.
+        sys.exit(-91) # you cannot call LumiaDA telling it to use a list of PIDs that you have not provided in the yml file.
     return(sha256Value, tracer, newFnameSelectedObsData, newFnameSelectedPIDs, oldDiscoveredObservations)
 
 
@@ -444,6 +483,7 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
     except:
         logger.warning("No Lumia installation directory found. Very odd. Please check why >pip show lumia< returns an error.")
     '''    
+    remoteCommitUrl='UNKNOWN    '
     if(bHaveGit):  
         import git
         bLocalRepo=True
@@ -462,7 +502,6 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
                     localRepo = git.Repo(sLocalGitRepos, search_parent_directories=True)
                 except:
                     logger.debug('Failed to find localRepo.working_tree_dir info')
-                    remoteCommitUrl='UNKNOWN    '
                     logger.info('Cannot find information about the local git repository. \nGit information logged in the log files of this run relies on what was written into this source file by the programmers alone.')
                     bLocalRepo=False
         if(bLocalRepo):
@@ -495,26 +534,7 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
             logger.warning(f"\nError: There is a mismatch between the current local or remote git commit hash ({myCom}) and \nthe LATESTGITCOMMIT_icosPrep ({LATESTGITCOMMIT_icosPrep}) variable at the top of this lumia.GUI.housekeeping.py file. \nPlease check if there is a newer version on github or whether you forgot to push your latest local commit to the remote github.\nHowever, it is a common chicken-and-egg problem that one can add the latest commit hash value to the source code after it was checked in.\nPlease consider resolving the conflict before proceeding.")
         #sys.exit(-5)
 
-    wrongOrMissingVersion=False
-    nVers=0
-    nSubVers=0
-    try:
-        # print(ymlContents['thisConfigFile']['dataformat']['version'])
-        nVers=int(ymlContents['thisConfigFile']['dataformat']['version'])
-    except: 
-        wrongOrMissingVersion=True
-    if not (nVers==nThisConfigFileVersion):
-        wrongOrMissingVersion=True
-    try:
-        nSubVers=int(ymlContents[ 'thisConfigFile']['dataformat']['subversion'])
-    except:
-        wrongOrMissingVersion=True
-    if (nSubVers<1)or(nSubVers>nThisConfigFileSubVersion):
-        wrongOrMissingVersion=True
-    if(wrongOrMissingVersion):    
-        logger.error(f'Wrong format of input Lumia config yml file. Your configuration file needs to be of major version=={nThisConfigFileVersion} and sub-version>0.')
-        sys.exit(-3)
-    return(nVers, nSubVers, repoUrl, branch, sLocalGitRepos,   remoteCommitUrl , myCom, LATESTGITCOMMIT_icosPrep)
+    return(repoUrl, branch, sLocalGitRepos,   remoteCommitUrl , myCom, LATESTGITCOMMIT_icosPrep, packageRootDir)
 
 
 def readYmlCfgFile(ymlFile):
@@ -637,8 +657,33 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  p
     nThisConfigFileVersion= int(6)
     nThisConfigFileSubVersion=int(3)
     useMachine=False
+    bPrepOnly=False
+    if(('dataHunter' in parentScript) or ('lumiaGUI' in parentScript) or ('icosPrep' in parentScript)):
+        bPrepOnly=True # If some files are missing that are needed by Lumia but not by the prep program, then execution continues
+        # if bPrepOnly is set to True. This eases preparation of the obs data on a machine different from the one doing the heavy lifting of Lumia.
     # Now read the yaml configuration file - whether altered by the GUI or not
     ymlContents=readYmlCfgFile(ymlFile)
+
+    wrongOrMissingVersion=False
+    nVers=0
+    nSubVers=0
+    try:
+        # print(ymlContents['thisConfigFile']['dataformat']['version'])
+        nVers=int(ymlContents['thisConfigFile']['dataformat']['version'])
+    except: 
+        wrongOrMissingVersion=True
+    if not (nVers==nThisConfigFileVersion):
+        wrongOrMissingVersion=True
+    try:
+        nSubVers=int(ymlContents[ 'thisConfigFile']['dataformat']['subversion'])
+    except:
+        wrongOrMissingVersion=True
+    if (nSubVers<1)or(nSubVers>nThisConfigFileSubVersion):
+        wrongOrMissingVersion=True
+    if(wrongOrMissingVersion):    
+        logger.error(f'Wrong format of input Lumia config yml file. Your configuration file needs to be of major version=={nThisConfigFileVersion} and sub-version>0.')
+        sys.exit(-3)
+
 
     # Save  all details of the configuration and the version of the software used:
     
@@ -743,13 +788,15 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  p
     logger.info(f'{args}')  # document how Lumia was called including commandline options
     
     # ### query Git - what version of Lumia are we running? ### #        
-    (nVers, nSubVers, repoUrl, branch, sLocalGitRepos, remoteCommitUrl, myCom, LATESTGITCOMMIT_icosPrep)=\
+    (repoUrl, branch, sLocalGitRepos, remoteCommitUrl, myCom, LATESTGITCOMMIT_icosPrep, rootDir)=\
                                                         queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFileVersion, nThisConfigFileSubVersion,  packageRootDir)
+    if(packageRootDir is None):
+        packageRootDir=rootDir
     # # setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'model',  'transport',  'exec'],   value='/lumia/transport/multitracer.py', bNewValue=False)
     setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'model',  'executable'],   value='${lumia:transport/multitracer.py}', bNewValue=False)
 
     # ### Tracer background concentration files ### # 
-    bUseMachine=handleBackgndData(ymlContents, ymlFile,  sOutputPrfx, myMachine)
+    bUseMachine=handleBackgndData(ymlContents, ymlFile,  sOutputPrfx, myMachine,  nVers, nSubVers,  bPrepOnly)
     if(bUseMachine):
         useMachine=True
     
@@ -1054,7 +1101,7 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  p
         sys.exit(-10)
 
     logger.info(f'updated configuratrion yaml file written to {sNewYmlFileName}')
-    return(sNewYmlFileName, oldDiscoveredObservations, myMachine)  # oldDiscoveredObservations is only used by LumiaGUI
+    return(sNewYmlFileName, oldDiscoveredObservations, myMachine, packageRootDir)  # oldDiscoveredObservations is only used by LumiaGUI
 
 
 

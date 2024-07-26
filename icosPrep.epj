@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project icosPrep",
     "copyright": "Copyright (C) 2024 Arndt Meier, koala.oso@gmail.com",
-    "saved": "2024-07-18, 10:44:22"
+    "saved": "2024-07-23, 23:19:17"
   },
   "project": {
     "AUTHOR": "Arndt Meier",
@@ -81,9 +81,11 @@
       "icosPrep/dataHunting/guiElements_ipyWdg.py",
       "icosPrep/dataHunting/myCarbonPortalTools.py",
       "icosPrep/dataHunting/queryCarbonPortal.py",
-      "icosPrep/dataPrep/getHandleFromDoi.py",
+      "icosPrep/dataPrep/obsCPortalDb.py",
+      "icosPrep/dataPrep/obsdb.py",
       "icosPrep/dataPrep/prepData.py",
       "icosPrep/dataPrep/readLv3NcFileFromCarbonPortal.py",
+      "icosPrep/dataPrep/readObservationsFromCarbonPortal.py",
       "icosPrep/icosPrep.py",
       "icosPrep/utils/__init__.py",
       "icosPrep/utils/boringStuff.py",
