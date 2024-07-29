@@ -5,10 +5,9 @@ https://github.com/isbjoernen/icosPrep
 ==========================
 Installing icosPrep
 
-I'm on a ubuntu 22.04  system - you may have to adjust to your environment. Lumia is unlikely to run on Microsoft operating systems,
-but pretty much any Linux flavour should be fine.
+I'm on a ubuntu 22.04  system - you may have to modify some instructions for your environment. Lumia is unlikely to run on Microsoft operating systems, but pretty much any Linux flavour should be fine.
 
-Let's focus on icosPrep for now. For Lumia itself you needa a truckload of input data, which is why
+Let's focus on icosPrep for now. For Lumia itself you need a a truckload of input data, which is why
 we prefer to run the actual inversion model in Lund with direct access to ICOS data (observations & emissions) and the SWESTORE (footprints, ERA5).
 
 1) prepare your system
@@ -62,10 +61,8 @@ export PYPTH=$ENV_PREFIX/lib/python${PYTHON_VERSION}/:$ENV_PREFIX/bin:$ENV_PREFI
 5) update pip and install all requirements for icosPrep:
 python -m pip install --upgrade pip
 
-pip install -r /home/arndt/nateko/it/bygg/docker.LumiaDA.01/min-requirements-lumiGUI.txt
 
-Note: if you want a nice Python IDE, try  pip install eric-ide (however, this will likely install a number of other things and might be
-better installed in an independent virt env of its own.)
+Note: if you want a nice Python IDE, try  pip install eric-ide (however, this will likely install a number of other things and might be better installed in an independent virt env of its own.)
 
 
 6) installing icosPrep
@@ -79,6 +76,10 @@ cd icosPrep
 git config --global init.defaultBranch master
 git clone https://github.com/isbjoernen/icosPrep.git
 cd icosPrep
+
+# install the python pre-requisites for icosPrep
+pip install -r ./docs/min-requirements-icosPrep.txt
+
 pip install -e .
 
 
@@ -107,13 +108,13 @@ In that folder create 2 subfolder, 'tmp' and 'output'
 ./src/dataHunting
 and upload
 dataHunterNotebook.ipynb
-lumia-config-v6-tr-co2.yml
+lumia-config-v6.3-tr-co2-JL.yml  (from the examples directory)
 *.py
 
 All things fair and squre, you should be able to run
 dataHunterNotebook.ipynb
 in your JupyterLab
-You may want to uncomment the first few lines the first time you run it as you are likely to need those additional libraries.
+You may want to uncomment some of the first few lines the first time you run it as you are likely to need those additional libraries.
 
 Good Luck!
 
