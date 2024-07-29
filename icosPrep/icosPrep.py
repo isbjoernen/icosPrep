@@ -54,7 +54,7 @@ def main():
     #ymlFile=prepareCallToLumiaGUI(ymlFile,  USE_TKINTER,  packageRootDir,  args)
     try:
         logger.info(sCmd)
-        system(sCmd)
+        # system(sCmd)
     except:
         sys.exit('Abort. Call to dataHunter.py failed') 
     

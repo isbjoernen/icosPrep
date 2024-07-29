@@ -65,7 +65,7 @@ def  getMetaDataFromPid_via_icoscp_core(pid, suppressHugeCompilations=True):
     mdata=[]
     ndr=0
     bCoreLib=True  # if set to True, the coreMeta.get_dobj_meta(url) from the icoscp_core.icos package is tried first
-        # if it fails, getMetadataOldstyle(url) from the icoscp.cpb package is used as a fallback. If set to False, the order is reversed.
+        # if it fails, getMetadataOldstyle(url) from the icoscp package is used as a fallback. If set to False, the order is reversed.
     bAcceptable=True  
     url="https://meta.icos-cp.eu/objects/"+pid
     try:
@@ -76,7 +76,7 @@ def  getMetaDataFromPid_via_icoscp_core(pid, suppressHugeCompilations=True):
             bCoreLib=not bCoreLib # try the fallback method
             pidMetadata =  coreMeta.get_dobj_meta(url) if (bCoreLib) else getMetadataOldstyle(url)
         except:
-            print(f'Failed to get the metadata using icoscp.cpb for url={url}')
+            print(f'Failed to get the metadata using icoscp for url={url}')
             return(None,  False)  # Tell the calling parent routine that things went south...
         print(f'Failed to get the metadata using icoscp_core.icos.coreMeta.get_dobj_meta(url) for url={url}')
         return(None,  False)  # Tell the calling parent routine that things went south...

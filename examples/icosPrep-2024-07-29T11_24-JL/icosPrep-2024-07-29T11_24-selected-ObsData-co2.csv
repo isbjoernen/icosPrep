@@ -1,0 +1,54 @@
+,country,stationID,altitude,samplingHeight,IcosClass,latitude,longitude,dClass,dataSetLabel,pid,samplingHeight
+0,CH,BRM,797.0,"[212.0, 132.0, 72.0, 44.6, 12.5]",no,47.1896,8.1755,4,Obspack CO2 time-series result,loluBHpTb7EgO4DQ5hM8PRU_,212.0
+2,CH,JFJ,3571.8,"[13.9, 5.0]",1,46.5475,7.9851,4,Obspack CO2 time-series result,9_tK1OSyyjGueS-y-BbpG3kf,13.9
+5,CH,LHW,840.0,[32.0],no,47.4822,8.3973,4,Obspack CO2 time-series result,XxfuHku1oZSCaYNQuAunG_fA,32.0
+7,CZ,KRE,534.0,"[250.0, 125.0, 50.0, 10.0]",1,49.572,15.08,4,Obspack CO2 time-series result,1owi2XVPIi922ZN3aFWO27-o,250.0
+10,DE,GAT,70.0,"[341.0, 216.0, 132.0, 60.0, 30.0]",1,53.0657,11.4429,4,Obspack CO2 time-series result,H6bkh4DlAS6Z-EEnHTZIOLTM,341.0
+13,DE,HEI,113.0,[30.0],no,49.4172,8.675,4,Obspack CO2 time-series result,-z6HvHywe9aYyTPDZOUqTagr,30.0
+15,DE,HPB,934.0,"[131.0, 93.0, 50.0]",1,47.8011,11.0246,4,Obspack CO2 time-series result,Ut73CaidkhMPPXJgKoERf2_7,131.0
+18,DE,KIT,110.0,"[200.0, 100.0, 60.0, 30.0]",1,49.0915,8.4249,4,Obspack CO2 time-series result,L0QQcUMO1Blgi3kiHxyWKTgp,200.0
+21,DE,LIN,73.0,"[98.0, 40.0, 10.0, 2.5]",1,52.1663,14.1226,4,Obspack CO2 time-series result,bKVTcIZNef9G5daLLE6uscHT,98.0
+24,DE,SSL,1205.0,[12.0],2,47.9167,7.9166,4,Obspack CO2 time-series result,5ko5SnBjzQiLmrQbYGAT08Dh,12.0
+26,DE,TOH,801.0,"[147.0, 110.0, 76.0, 10.0]",2,51.8088,10.535,4,Obspack CO2 time-series result,l0bMrl1zIDYgODs53pUmNUsq,147.0
+29,DE,ZSF,2666.0,[3.0],2,47.4165,10.9796,4,Obspack CO2 time-series result,KSSNdWKuaeYxK-YQyt7ji4r0,3.0
+30,EE,JAR,36.0,"[110.0, 90.0, 70.0, 50.0, 30.0]",no,58.2776,27.3082,4,Obspack CO2 time-series result,1OeXFyb6hJCBZCm-T2CTGDEw,110.0
+32,ES,DEC,0.0,[10.0],no,40.7439,0.7866,4,Obspack CO2 time-series result,_Cmhztursm5K7cKbtCiqMIrK,10.0
+34,ES,EEC,20.0,[20.0],no,36.0586,-5.664,4,Obspack CO2 time-series result,E_IsGia5Q8SMG9UeKaIMSmg5,20.0
+36,ES,GIC,1436.0,[20.0],no,40.3457,-5.1755,4,Obspack CO2 time-series result,DtCTwxbWmW7aWNKx97leHtMQ,20.0
+38,ES,LMU,3000.0,[79.0],no,41.6,-1.1,4,Obspack CO2 time-series result,cUZOa_6OObQ_uufapmnr5eWX,79.0
+40,ES,SGC,850.0,[20.0],no,36.6956,-5.3975,4,Obspack CO2 time-series result,2UkVbwnUocQEveXOcRVblZct,20.0
+42,FI,PAL,565.0,[12.0],1,67.9733,24.1157,4,Obspack CO2 time-series result,IyDYSHYiNLa_WpobcWcU2JWE,12.0
+45,FI,PUI,232.0,[84.0],2,62.9096,27.6549,4,Obspack CO2 time-series result,qDu-I3BugyMgah_IXBr3qDGx,84.0
+47,FI,SMR,181.0,"[125.0, 67.2, 16.8]",1,61.8474,24.2947,4,Obspack CO2 time-series result,CA-Gn5PPp5lu5mUX_1y57Ttg,125.0
+50,FI,UTO,8.0,[57.0],2,59.7839,21.3672,4,Obspack CO2 time-series result,QOMBp8Gv1kEwwGfmbYp8vfkk,57.0
+52,FR,BIS,73.0,[47.0],no,44.3781,-1.2311,4,Obspack CO2 time-series result,IQocuWuD7YNjZf8iLXpcslL3,47.0
+54,FR,CRA,600.0,[60.0],no,43.1298,0.3692,4,Obspack CO2 time-series result,cMqL_xMr78O6qhJ2nQTBFjub,60.0
+56,FR,ERS,533.0,[40.0],no,42.9692,9.3801,4,Obspack CO2 time-series result,NADQ37FQGYLDsUJNvhGUdUAS,40.0
+58,FR,OHP,650.0,"[100.0, 50.0, 10.0]",no,43.931,5.712,4,Obspack CO2 time-series result,wzhwqCuKIgzQlzQsMfqRpjBJ,100.0
+60,FR,OPE,390.0,"[120.0, 50.0, 10.0]",1,48.5619,5.5036,4,Obspack CO2 time-series result,oJk7kuwfQa4n59BLLJzomCOP,120.0
+63,FR,PDM,2877.0,[28.0],no,42.9372,0.1411,4,Obspack CO2 time-series result,aT3KAtcaVlUjY42zXOuc9B9m,28.0
+65,FR,PUY,1465.0,[10.0],2,45.7719,2.9658,4,Obspack CO2 time-series result,BVGxGzTLRTWOiWoK7ShXYdEL,10.0
+68,FR,SAC,160.0,"[100.0, 60.0, 15.0]",1,48.7227,2.142,4,Obspack CO2 time-series result,2IaTjYIDYuphzvxciD8Ym5th,100.0
+71,FR,TRN,131.0,"[180.0, 100.0, 50.0, 5.0]",2,47.9647,2.1125,4,Obspack CO2 time-series result,bg0Se6qyrRzMy3xyIQMSEk6i,180.0
+74,GB,BSD,382.0,"[248.0, 108.0, 42.0]",no,54.3586,-1.1504,4,Obspack CO2 time-series result,U4wIFp0A6LJYoxGFI_kJ0-Bk,248.0
+76,GB,HFD,160.0,"[100.0, 50.0]",no,50.9767,0.2306,2,Atmospheric CO2 product,V-8w6guKN0VyR8gt9wYswsNz,100.0
+77,GB,RGL,207.0,"[90.0, 45.0]",2,51.9975,-2.5399,4,Obspack CO2 time-series result,8WnTjIVhVvwtuNnSbnq7qYD1,90.0
+79,GB,TAC,64.0,"[185.0, 100.0, 54.0]",no,52.5188,1.1387,4,Obspack CO2 time-series result,ko_fTWB4WysUD7rCSSK-vlZc,185.0
+81,GB,WAO,17.0,[10.0],2,52.95,1.121,4,Obspack CO2 time-series result,o4YJc3f4i-oJbC4INxte-T16,10.0
+83,GR,FKL,250.0,[15.0],no,35.3378,25.6694,4,Obspack CO2 time-series result,aD8PxxG5BC1OXGckAs8yu0iQ,15.0
+85,HU,HUN,248.0,"[115.0, 82.0, 48.0, 10.0]",2,46.9558,16.6522,4,Obspack CO2 time-series result,YN8fHIUuEYgmGeTABcFO73YI,115.0
+87,IE,CRP,9.0,[14.0],no,52.18,-6.37,4,Obspack CO2 time-series result,mJV_GSeZ_RcXY1ptn1qdErib,14.0
+89,IE,MHD,5.0,[24.0],no,53.3261,-9.9036,4,Obspack CO2 time-series result,ChPPhUc6Riby0GZBlZ47K-pR,24.0
+91,IE,MLH,22.0,[47.0],no,55.355,-7.333,4,Obspack CO2 time-series result,TDm8HEo-pfhDbdINV9AGk5-5,47.0
+93,IT,CMN,2165.0,[8.0],2,44.1936,10.6999,4,Obspack CO2 time-series result,G6-aVcacxSqzVd8v9-hZjOWL,8.0
+95,IT,IPR,210.0,"[100.0, 60.0, 40.0]",2,45.8147,8.636,4,Obspack CO2 time-series result,6zeCpsIcbQvz_HZfINH9R5CI,100.0
+98,IT,LMP,45.0,[8.0],2,35.5181,12.6322,4,Obspack CO2 time-series result,eNr0h0vEenwWbfSfA0aRGcMI,8.0
+100,IT,PRS,3480.0,[10.0],2,45.93,7.7,4,Obspack CO2 time-series result,Npx5YMlv6w7nVQBKdgLgzd-u,10.0
+102,NL,CBW,0.0,"[207.0, 127.0, 67.0, 27.0]",1,51.9703,4.9264,4,Obspack CO2 time-series result,sSPxxFAPhdq5H1rarK-KyILd,207.0
+104,NL,LUT,1.0,[60.0],2,53.4036,6.3528,4,Obspack CO2 time-series result,Qd9v5zPvvJSAVNEbqJJuTCDQ,60.0
+106,NO,BIR,219.0,[2.5],2,58.3886,8.2519,2,Atmospheric CO2 product,PXBNgmAH-PG5_AYXDl4fu2se,2.5
+107,PL,BIK,183.0,"[300.0, 180.0, 90.0, 30.0, 5.0]",no,53.2294,23.0128,4,Obspack CO2 time-series result,5zUhAc31fBY39EGd2ld17vKj,300.0
+109,PL,KAS,1987.0,[7.0],no,49.2333,19.9833,4,Obspack CO2 time-series result,4WyEJdAWwmzia4JUiB7lNVYB,7.0
+111,SE,HTM,115.0,"[150.0, 70.0, 30.0]",1,56.0976,13.4189,4,Obspack CO2 time-series result,RYB92lyZABxlC1sRWMW_w-qS,150.0
+114,SE,NOR,46.0,"[100.0, 58.0, 32.0]",1,60.0864,17.4794,4,Obspack CO2 time-series result,JQfA_BH7vayy8sf9g44pM-Sl,100.0
+117,SE,SVB,269.0,"[150.0, 85.0, 35.0]",1,64.256,19.775,4,Obspack CO2 time-series result,swYMiuPQ4mP3gJt2U21Vg9K1,150.0

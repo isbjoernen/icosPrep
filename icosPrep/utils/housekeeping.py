@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-LATESTGITCOMMIT_icosPrep='1d0b97399f87579e523f10e5c8a9bfea4a622c7b'
+LATESTGITCOMMIT_icosPrep='df1bdf9177df71c5acbd8134e18699778273f418'
 LATESTGITCOMMIT_LumiaMaster='186409332c94be3cb2c5cafe8edb578b166e11d3'
 LATESTGITCOMMIT_masterPlus='2fc00b3f9600af4cccacd7da5ce2aa6e31f01bc4'
 LATESTGITCOMMIT_LumiaDA='09957785de81f6653ca62b3cd735d114b0c660f3'
@@ -496,14 +496,17 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
                 logger.debug(f'localRepo={localRepo}')
                 localRepo = git.Repo(script_directory, search_parent_directories=True)
             except:
-                sLocalGitRepos=localRepo.working_tree_dir # /home/arndt/dev/lumia/lumiaDA/lumia
-                logger.debug(f'Found localRepo.working_tree_dir info at : {sLocalGitRepos}')
                 try:
-                    localRepo = git.Repo(sLocalGitRepos, search_parent_directories=True)
+                    sLocalGitRepos=localRepo.working_tree_dir # /home/arndt/dev/lumia/lumiaDA/lumia
+                    logger.debug(f'Found localRepo.working_tree_dir info at : {sLocalGitRepos}')
+                    try:
+                        localRepo = git.Repo(sLocalGitRepos, search_parent_directories=True)
+                    except:
+                        logger.debug('Failed to find localRepo.working_tree_dir info')
+                        logger.info('Cannot find information about the local git repository. \nGit information logged in the log files of this run relies on what was written into this source file by the programmers alone.')
+                        bLocalRepo=False
                 except:
-                    logger.debug('Failed to find localRepo.working_tree_dir info')
-                    logger.info('Cannot find information about the local git repository. \nGit information logged in the log files of this run relies on what was written into this source file by the programmers alone.')
-                    bLocalRepo=False
+                    sLocalGitRepos=None
         if(bLocalRepo):
             try:
                 repoHead=localRepo.head.ref # repo.head.ref=LumiaDA
@@ -520,11 +523,11 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
             try:
                 myCom=str(localRepo.head.commit)
                 logger.debug(f'Local git info suggests that the latest commit is : {myCom}')
+                remoteCommitUrl=repoUrl[:-4]+'/commit/'+str(localRepo.head.commit)
+                logger.debug(f'Which you should also be able to get from : {remoteCommitUrl}')
                 #myComB=localRepo.head.commit(branch)
             except:
                 logger.debug('Failed to find localRepo.head.commit info')
-            remoteCommitUrl=repoUrl[:-4]+'/commit/'+str(localRepo.head.commit)
-            logger.debug(f'Which you should also be able to get from : {remoteCommitUrl}')
             # https://github.com/lumia-dev/lumia/commit/6be5dd54aa5a16b136c2c1e2685fc8abf2beb404
     
     if(LATESTGITCOMMIT_icosPrep not in myCom):

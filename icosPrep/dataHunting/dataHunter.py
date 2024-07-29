@@ -297,7 +297,8 @@ class lumiaGuiApp:
                     display(self.wdgGrid4)
                     askUserUseCachedBtn=ge.guiWidgetsThatWait4UserInput(watchedWidget=self.Pg1UseCachedButton,watchedWidget2=self.Pg1DontUseCachedButton, 
                             title='',  myDescription="Use cached Discovered-obs-data",  myDescription2="Hunt for latest data from the carbon portal", width=300)
-                    whichButton=askUserUseCachedBtn.selectedBtn
+                    logger.debug(f'askUserUseCachedBtn={askUserUseCachedBtn}')
+                    whichButton=askUserUseCachedBtn #.selectedBtn
                     if(whichButton==1): 
                         self.bUseCachedList = True
                     else:
@@ -314,7 +315,7 @@ class lumiaGuiApp:
                 sTxt=f"Fatal Error: Failed to write to text file {self.ymlFile} in local run directory. Please check your write permissions and possibly disk space etc."
                 logger.error(sTxt)
                 self.closeTopLv(bWriteStop=True)  # Abort. Do not proceed to page 2
-            logger.info("Done. LumiaGui part-1 completed successfully. Config file updated.")
+            logger.info("Done. data hunting part-1 completed successfully. Config file updated.")
             
             # At this moment the commandline is visible. Before closing the toplevel and proceeding, we need to discover any requested data.
             # Once collected, we have the relevant info to create the 2nd gui page and populate it with dynamical widgets.
@@ -2130,15 +2131,22 @@ def  readMyYamlFile(ymlFile):
         with open(ymlFile, 'r') as file:
             ymlContents = yaml.safe_load(file)
     except:
-        sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
-        os.system(sCmd)
+        logger.error(f"Abort! Unable to read yaml configuration file {ymlFile} - failed to read its contents with yaml.safe_load()")
+        readFailed=True
         try:
-            with open(ymlFile, 'r') as file:
-                ymlContents = yaml.safe_load(file)
-            #sCmd="cp "+ymlFile+' '+ymlFile+'.bac' # This is now already done in housekeeping.py, which is more consistent
-            #os.system(sCmd)
+            sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
+            os.system(sCmd)
+            try:
+                with open(ymlFile, 'r') as file:
+                    ymlContents = yaml.safe_load(file)
+                #sCmd="cp "+ymlFile+' '+ymlFile+'.bac' # This is now already done in housekeeping.py, which is more consistent
+                #os.system(sCmd)
+                readFailed=False
+            except:
+                readFailed=True
         except:
-            logger.error(f"Abort! Unable to read yaml configuration file {ymlFile} - failed to read its contents with yaml.safe_load()")
+            pass
+        if(readFailed):
             sys.exit(1)
     return(ymlContents)
 

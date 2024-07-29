@@ -16,9 +16,11 @@ from pandas import DataFrame  #, concat
 #Import ICOS tools:
 # from icoscp.sparql import sparqls, runsparql
 from icoscp.sparql.runsparql import RunSparql
-from icoscp.cpb.dobj import Dobj
+#from icoscp.cpb.dobj import Dobj
+from icoscp.dobj import Dobj
 from icoscp.collection import collection
-from icoscp.cpb import metadata
+#from icoscp.cpb import metadata
+from icoscp import metadata
 
 bDEBUG =False
 
@@ -67,6 +69,10 @@ FILTER( !(?timeStart > '2018-12-30T23:00:00.000Z'^^xsd:dateTime || ?timeEnd < '2
 order by desc(?submTime)
 '''
 
+def getMetadataOldstyle(url):
+    dobj=Dobj(url)
+    meta=dobj.meta
+    return(meta)
 
 
 # *****************************************************************************************
@@ -415,7 +421,8 @@ def discoverObservationsOnCarbonPortal(tracer='CO2', cpDir=None, pdTimeStart: da
     df=DataFrame()
     bSelected=True
     for pid in finalDobjLst:
-        pidMetadata = metadata.get("https://meta.icos-cp.eu/objects/"+pid)
+        #pidMetadata = metadata.get("https://meta.icos-cp.eu/objects/"+pid)
+        pidMetadata =getMetadataOldstyle("https://meta.icos-cp.eu/objects/"+pid)
         if pidMetadata is not None:
             isICOS=False
             if(pidMetadata['specification'].get('keywords', None) is not None):
