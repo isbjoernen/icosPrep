@@ -15,6 +15,8 @@ def main():
     p.add_argument('--end', dest='end', default=None, help="End of the simulation as in \'2018-12-31 23:59:59\'. Overwrites the value in the rc-file")
     p.add_argument('--machine', '-m', default='UNKNOWN', help='Name of the section of the yaml file to be used as "machine". It should contain the machine-specific settings (paths, number of CPUs, paths to secrets, etc.)')
     p.add_argument('--ymf', dest='ymf', default=None,  help='Required. Yaml configuration file where the user configues his or her Lumia run: parameters, input files etc.')   
+    p.add_argument('--step1', action='store_true', default=False, help="Only run the first step, the dataHunter")
+    p.add_argument('--step2', action='store_true', default=False, help="Only run the second step, the data preparation")
     p.add_argument('--noTkinter', '-n', action='store_true', default=False, help="Do not use tkinter (=> use ipywidgets)")
     p.add_argument('--verbosity', '-v', dest='verbosity', default='INFO')
     args, unknown = p.parse_known_args(sys.argv[1:])
@@ -57,10 +59,14 @@ def main():
     #ymlFile=prepareCallToLumiaGUI(ymlFile,  USE_TKINTER,  packageRootDir,  args)
     try:
         logger.info(sCmd)
-        # system(sCmd)
+        if not(args.step2):
+            system(sCmd)
     except:
         sys.exit('Abort. Call to dataHunter.py failed') 
     
+    if (args.step1):
+        logger.info('Done. Ran only first step as requested.')
+        sys.exit(0)
     #from utils.housekeeping import caclulateSha256Filehash
     #sv=caclulateSha256Filehash('/home/arndt/data/backgroundCo2Concentrations/background_2019.nc')
     #print(f'sha256 value of background_2019.nc is: {sv}')
