@@ -6,26 +6,29 @@ from pint import Quantity
 import xarray as xr
 from dataclasses import dataclass, field, asdict
 from numpy import ndarray, unique, array, zeros, nan
-from gridtools import Grid
-from rctools import RcFile
 from datetime import datetime
 from pandas import PeriodIndex, Timestamp, DatetimeIndex
 from loguru import logger
-from lumia.units import units_registry as ureg
-from gridtools import grid_from_rc
 from pandas import date_range
 from pandas.tseries.frequencies import DateOffset, to_offset
-from lumia.tracers import species, Unit
-from lumia.Tools.time_tools import periods_to_intervals
 from netCDF4 import Dataset
-import icosPortalAccess.readLv3NcFileFromCarbonPortal as fromICP
-from icoscp.dobj import Dobj
-#from icoscp.cpb.dobj import Dobj
 import numbers
 from lumia.formatters import cdoWrapper
 from archive import Rclone
 from typing import Iterator
-import pickle
+# # import pickle
+# # from icoscp.dobj import Dobj
+#from icoscp.cpb.dobj import Dobj
+#from gridtools import Grid
+from utils.gridutils import Grid
+import dataPrep.readLv3NcFileFromCarbonPortal as fromICP
+#from lumia.tracers import species, Unit
+from utils.tracers import species, Unit
+#from lumia.units import units_registry as ureg
+from utils.units import units_registry as ureg
+#from rctools import RcFile
+# #from gridtools import grid_from_rc
+#from lumia.Tools.time_tools import periods_to_intervals
 
 
 @dataclass
@@ -735,7 +738,7 @@ class Data:
         return em
 
     @classmethod
-    def from_rc(cls, rcf: RcFile, start: Union[datetime, Timestamp, str], end: Union[datetime, str, Timestamp]) -> "Data":
+    def from_rc(cls, ymf, ymlContents, start: Union[datetime, Timestamp, str], end: Union[datetime, str, Timestamp]) -> "Data":
         """
         Create a Data structure from a rc-file, with the following keys defined:
         - tracers
@@ -750,14 +753,22 @@ class Data:
         em = cls()
         emDataShape=None 
         # TODO: we need to loop through the tracers, not hard-wire co2
-        for tr in list(rcf.rcfGet('run.tracers')):
+        tracers=ymlContents['run']['tracers']
+        if (isinstance(tracers, str)):
+            tracerLst=list(tracers)
+        else:
+            tracerLst=tracers
+        #for tr in list(rcf.rcfGet('run.tracers')):
+        for tr in tracerLst:
 
             # Create spatial grid - provided by minLat, maxLat, dLat, minLong, maxLong, dLong (e.g. Europe, quarter degree)
             #grid = grid_from_rc(rcf, name=rcf.rcfGet(f'emissions.{tr}.region'))
-            grid = rcf.rcfGet(f'emissions.{tr}.region')
+            # grid = rcf.rcfGet(f'emissions.{tr}.region')
+            grid = ymlContents['emissions'][tr]['region']
 
             # Create temporal grid:
-            freq = rcf.rcfGet(f'emissions.{tr}.interval')  # get the time resolution requested in the rc file, key emissions.co2.interval, e.g. 1h
+            #freq = rcf.rcfGet(f'emissions.{tr}.interval')  # get the time resolution requested in the rc file, key emissions.co2.interval, e.g. 1h
+            freq = ymlContents['emissions'][tr]['interval']
             timeRange = date_range(start, end, freq=freq, inclusive='left') # the time interval requested in the rc file
             logger.debug(f'TimeRange: start={start},  end={end},  freq={ freq},  timeRange={timeRange}')
 
@@ -772,7 +783,7 @@ class Data:
                                      timestep=freq))  # .seconds * ur('s')))
 
             # Import emissions for each category of that tracer
-            ll=rcf['emissions'][tr]['categories']  # Why is the list order changed to alphabetical?
+            ll=ymlContents['emissions'][tr]['categories']  
             logger.debug(f'Emission categories are: {ll}')
             emissionCategories=list(ll)
             logger.debug(f'List of emission categories are: {emissionCategories}')
@@ -785,17 +796,31 @@ class Data:
                 #   - default to "False" (no resampling)
                 # TODO: Not working as described. If the key emissions.co2.resample_from is missing, no exception is triggered and 'None' instead of the default value is returned /cec-ami 2023-12-13
                 #freq_src=rcf.rcfGet('emissions', tr, cat,'resample_from', default=freq)
-                freq_src=rcf.rcfGet(f'emissions.{tr}.{cat}.resample_from', default=freq)
+                try:
+                    freq_src=ymlContents['emissions'][tr][cat]['resample_from']
+                except:
+                    freq_src=freq
                 # origin = rcf.rcfGet(f'emissions.{tr}.categories.{cat}.origin', fallback=f'emissions.{tr}.categories.{cat}')
-                fallback=rcf.rcfGet(f'emissions.{tr}.categories.{cat}', default=None)
+                #fallback=rcf.rcfGet(f'emissions.{tr}.categories.{cat}', default=None)
+                try:
+                    fallback=ymlContents['emissions'][tr]['categories'][cat]
+                except:
+                    fallback=None
                 if not (isinstance(fallback, str)):
                     fallback=None
-                origin = rcf.rcfGet(f'emissions.{tr}.categories.{cat}.origin', fallback=fallback)
+                #origin = rcf.rcfGet(f'emissions.{tr}.categories.{cat}.origin', fallback=fallback)
+                try:
+                    origin = ymlContents['emissions'][tr]['categories'][cat]['origin']
+                except:
+                    origin=fallback
                 if(origin is None):
                     logger.error(f'Abort. No emissions file specified in your yaml config file for key emissions.{tr}.categories.{cat}.origin')
                     sys.exit(73)
-                logger.debug("tr.path= "+rcf.rcfGet(f'emissions.{tr}.path'))
-                regionGrid=rcf.rcfGet(f'emissions.{tr}.region')
+                #etp=rcf.rcfGet(f'emissions.{tr}.path')
+                etp=ymlContents['emissions'][tr]['path'](f'emissions.{tr}.path')
+                logger.debug(f"tr.path= {etp}")
+                #regionGrid=rcf.rcfGet(f'emissions.{tr}.region')
+                regionGrid=ymlContents['emissions'][tr]['region']
                 # print(regionGrid,  flush=True)
                 sRegion="lon0=%.3f, lon1=%.3f, lat0=%.3f, lat1=%.3f, dlon=%.3f, dlat=%.3f, nlon=%d, nlat=%d"%(regionGrid.lon0, regionGrid.lon1,  regionGrid.lat0,  regionGrid.lat1,  regionGrid.dlon,  regionGrid.dlat,  regionGrid.nlon,  regionGrid.nlat)
                 logger.debug(f"tr.region= {sRegion}")
@@ -805,14 +830,18 @@ class Data:
                 else:
                     logger.debug(f"origin={origin}")
                 # emis = load_preprocessed(prefix, start, end, freq=freq, archive=rcf.rcfGet(f'emissions.{tr}.path'),  grid=grid)
-                myPath2FluxData1=rcf.rcfGet(f'emissions.{tr}.path')
-                myPath2FluxData3=rcf.rcfGet(f'emissions.{tr}.interval')
+                #myPath2FluxData1=rcf.rcfGet(f'emissions.{tr}.path')
+                myPath2FluxData1=ymlContents['emissions'][tr]['path']
+                #myPath2FluxData3=rcf.rcfGet(f'emissions.{tr}.interval')
+                myPath2FluxData3=ymlContents['emissions'][tr]['interval']
                 myPath2FluxData2=''
                 try:
-                    myPath2FluxData2=rcf.rcfGet(f'emissions.{tr}.regionName')
+                    #myPath2FluxData2=rcf.rcfGet(f'emissions.{tr}.regionName')
+                    myPath2FluxData2=ymlContents['emissions'][tr]['regionName']
                 except:
                     logger.warning(f'Warning: No key emissions.{tr}.regionName found in user defined resource file (used in pathnames). I shall try to guess it...')
-                    mygrid=rcf.rcfGet(f'emissions.{tr}.region')
+                    #mygrid=rcf.rcfGet(f'emissions.{tr}.region')
+                    mygrid=ymlContents['emissions'][tr]['region']
                     if((250==int(mygrid.dlat*1000)) and (250==int(mygrid.dlon*1000)) and (abs((0.5*(mygrid.lat0+mygrid.lat1))-53)<mygrid.dlat)and (abs((0.5*(mygrid.lon0+mygrid.lon1))-10)<mygrid.dlon)):
                         myPath2FluxData2='eurocom025x025' # It is highly likely that the region is centered in Europe and has a lat/lon grid of a quarter degree
                     else:
@@ -825,22 +854,28 @@ class Data:
                     myPath2FluxData=myPath2FluxData+os.path.sep
                 myarchivePseudoDict='rclone:lumia:'+myPath2FluxData
                 if((origin is None)or(origin == '') or ('None' == origin)):
-                    prefix = os.path.join(myPath2FluxData, rcf.rcfGet(f'emissions.{tr}.prefix') )
+                    #prefix = os.path.join(myPath2FluxData, rcf.rcfGet(f'emissions.{tr}.prefix') )
+                    prefix = os.path.join(myPath2FluxData, ymlContents['emissions'][tr]['prefix'])
                 else:
-                    prefix = os.path.join(myPath2FluxData, rcf.rcfGet(f'emissions.{tr}.prefix') + origin + '.')
+                    #prefix = os.path.join(myPath2FluxData, rcf.rcfGet(f'emissions.{tr}.prefix') + origin + '.')
+                    prefix = os.path.join(myPath2FluxData, ymlContents['emissions'][tr]['prefix']+ origin + '.')
                 logger.debug("prefix= "+prefix)
                 # If the location in emissions.{tr}.location.{cat} is CARBONPORTAL, then we read that file directly from the carbon 
                 # portal, else we assume it is available on the local system in the user-stated path.
                 # if origin.startswith('@'): is now obsolete, because it is incompatible with the yaml naming rules
-                sLocation=rcf.rcfGet(f'emissions.{tr}.location.{cat}')
-                catDatasetName=rcf.rcfGet(f'emissions.{tr}.categories.{cat}.origin')
+                #sLocation=rcf.rcfGet(f'emissions.{tr}.location.{cat}')
+                sLocation=ymlContents['emissions'][tr]['location'][cat]
+                #catDatasetName=rcf.rcfGet(f'emissions.{tr}.categories.{cat}.origin')
+                catDatasetName=ymlContents['emissions'][tr][''][cat]['origin']
                 logger.debug(f'Time span: start={start},  end={end},  freq={ freq} ')
                 if ('CARBONPORTAL' in sLocation):
                     # we attempt to locate and read that flux information directly from the carbon portal - given that this code is executed on the carbon portal itself
                     if((origin is None)or(origin == '') or ('None' == origin)):
-                        sFileName = os.path.join(rcf.rcfGet(f'emissions.{tr}.prefix') )
+                        #sFileName = os.path.join(rcf.rcfGet(f'emissions.{tr}.prefix') )
+                        sFileName = ymlContents['emissions'][tr]['prefix']
                     else:
-                        sFileName = os.path.join(rcf.rcfGet(f'emissions.{tr}.prefix') + origin)
+                        #sFileName = os.path.join(rcf.rcfGet(f'emissions.{tr}.prefix') + origin)
+                        sFileName = str(ymlContents['emissions'][tr]['prefix']) + str(origin)
                     if (catDatasetName not in origin):
                         sFileName+='.'+catDatasetName
                     # Hint from rclone: The default way to instantiate the Rclone archive is to pass a path, with the format: "rclone:remote:path". 

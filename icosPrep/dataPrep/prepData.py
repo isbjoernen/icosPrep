@@ -121,8 +121,9 @@ def prepData(ymlFile, myMachine= 'UNKNOWN'):
 
     # Load the pre-processed emissions like fossil/EDGAR, marine, vegetation, ...:
     # sKeyword='LPJGUESS'
-    logger.debug(f'xr.Data.from_rc(rcf, start, end): start={start},  end={end}')
-    emis = xr.Data.from_rc(rcf, start, end)
+    logger.debug(f'Calling xrReader.Data.from_rc(rcf, start, end): start={start},  end={end}')
+    import dataPrep.xrReader as xrReader
+    emis = xrReader.Data.from_rc(ymlFile,  ymlContents, start, end)
     logger.info('emis data read.')
     # TODO: the df is for debugging only - remove later
     try:
