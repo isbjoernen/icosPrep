@@ -155,10 +155,15 @@ class obsdb(obsdb):
         # create a datetime64 version of these so we can extract the time interval needed from the pandas data frame
         sOutputPrfx=self.ymlContents[ 'run']['thisRun']['uniqueOutputPrefix']
         sTmpPrfx=self.ymlContents[ 'run']['thisRun']['uniqueTmpPrefix']
+        logger.debug(f'sTmpPrfx={sTmpPrfx}')
         #selectedObsFile=self.ymlContents['observations'][tracer]['file']['selectedObsData']
         dobjLstFile=self.ymlContents['observations'][tracer]['file']['selectedPIDs']
-        with open(dobjLstFile) as file:
-           selectedDobjLst = [line.rstrip() for line in file]
+        try:
+            with open(dobjLstFile) as file:
+               selectedDobjLst = [line.rstrip() for line in file]
+        except:
+            logger.error(f'Unable to read file {dobjLstFile} stated in the config file in key observations.{tracer}.file.selectedPIDs')
+            sys.exit(-78)
         # read the observational data from all the files in the dobjLst. These are of type ICOS ATC time series
         if((selectedDobjLst is None) or (len(selectedDobjLst)<1)):
             logger.error("Fatal Error! ABORT! dobjLst is empty. We did not find any dry-mole-fraction tracer observations on the carbon portal. We need a human to fix this...")
@@ -452,6 +457,8 @@ class obsdb(obsdb):
             dfgood.to_csv(sOutputPrfx+'good-PIDs-successfullyReadObsDataSets.csv', encoding='utf-8', mode='w', sep=',')
             logger.info(f'Good PIDs ()with all queried properties found) have been written to {sOutputPrfx}good-PIDs-successfullyReadObsDataSets.csv')
             setattr(self, 'sites', allSitesDfs)
+            sTmpPrfx=self.ymlContents[ 'run']['thisRun']['uniqueTmpPrefix']
+            logger.debug(f'sTmpPrfx={sTmpPrfx}')
             allObsDfs.to_csv(sTmpPrfx+'_dbg_obsData-NoBkgnd.csv', encoding='utf-8', mode='w', sep=',')
             allSitesDfs.to_csv(sTmpPrfx+'_dbg_mySitesWithUsableData.csv', encoding='utf-8', sep=',', mode='w')
             logger.debug(f'gatherObs_fromCPortal() completed successfully. Returning allObsDfs and {sTmpPrfx}_dbg_obsData-NoBkgnd.csv')
@@ -501,6 +508,7 @@ class obsdb(obsdb):
         obsDf.info() # is a timezone-naive datetime[64] data type
         sTmpPrfx=self.ymlContents[ 'run']['thisRun']['uniqueTmpPrefix']
         sOutputPrfx=self.ymlContents[ 'run']['thisRun']['uniqueOutputPrefix']
+        logger.debug(f'sTmpPrfx={sTmpPrfx}')
 
         xBgDf = bgDf[['code', 'time', 'background']].copy()  # turns time into an integer it seems....
         xBgDf.to_csv(sTmpPrfx+'_dbg_xBgDf.csv', encoding='utf-8', mode='w', sep=',')

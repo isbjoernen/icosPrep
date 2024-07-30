@@ -14,7 +14,7 @@ def main():
     p.add_argument('--start', dest='start', default=None, help="Start of the simulation in date+time ISO notation as in \'2018-08-31 00:18:00\'. Overwrites the value in the rc-file")
     p.add_argument('--end', dest='end', default=None, help="End of the simulation as in \'2018-12-31 23:59:59\'. Overwrites the value in the rc-file")
     p.add_argument('--machine', '-m', default='UNKNOWN', help='Name of the section of the yaml file to be used as "machine". It should contain the machine-specific settings (paths, number of CPUs, paths to secrets, etc.)')
-    p.add_argument('--ymf', dest='ymf', default=None,  help='yaml configuration file where the user plans his or her Lumia run: parameters, input files etc.')   
+    p.add_argument('--ymf', dest='ymf', default=None,  help='Required. Yaml configuration file where the user configues his or her Lumia run: parameters, input files etc.')   
     p.add_argument('--noTkinter', '-n', action='store_true', default=False, help="Do not use tkinter (=> use ipywidgets)")
     p.add_argument('--verbosity', '-v', dest='verbosity', default='INFO')
     args, unknown = p.parse_known_args(sys.argv[1:])
@@ -37,10 +37,13 @@ def main():
     if(args.verbosity):
         sCmd=sCmd+' --verbosity='+str(args.verbosity)
     if(args.ymf is None):
-        ymlFile=None
+        logger.error('--ymf is a required parameter. You need to provide a Lumia yaml configuration file. icosPrep ships with an example.')
     else:
         ymlFile = args.ymf
         sCmd=sCmd+' --ymf='+str(ymlFile)
+    if (not path.isfile(ymlFile)):
+        logger.error(f"Fatal error in icosPrep: User specified configuration file {ymlFile} does not exist. Abort.")
+        sys.exit(-33)
     if not(args.start is None):
         sCmd=sCmd+' --start='+str(args.start)
     if not(args.end is None):

@@ -291,7 +291,8 @@ class obsdb:
 
         print('obs.sites=',  flush=True) 
         print(obs.sites,  flush=True)
-        sTmpPrfx=rcFile[ 'run']['thisRun']['uniqueOutputPrefix']
+        sTmpPrfx=rcFile[ 'run']['thisRun']['uniqueTmpPrefix']
+        logger.debug(f'sTmpPrfx={sTmpPrfx}')
         obs.sites.to_csv(sTmpPrfx+'obsSites.csv',  encoding='utf-8', sep=',',  mode='w')
         # Remove columns that have been transferred to "sites", except for the "site" column, which is used for establishing correspondence
         obs.observations = df.loc[:, ['site'] + list(set(df.columns) - set(obs.sites.columns))]

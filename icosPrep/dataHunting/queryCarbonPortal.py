@@ -442,6 +442,7 @@ def discoverObservationsOnCarbonPortal(tracer='CO2', pdTimeStart: datetime=None,
     if(nBadDataSets > 0):
         logger.warning(f'{nBadDataSets} of {i} data records failed to read correctly and had to be discarded.')
     sTmpPrfx=ymlContents[ 'run']['thisRun']['uniqueTmpPrefix']
+    logger.debug(f'sTmpPrfx={sTmpPrfx}')
     df.to_csv(sTmpPrfx+'_dbg_collectedObs.csv', mode='w', sep=',')
     dfCountStations=df.drop_duplicates(['stationID'], keep='first') 
     nObsDataRecords = len(df)
@@ -469,11 +470,13 @@ def discoverObservationsOnCarbonPortal(tracer='CO2', pdTimeStart: datetime=None,
     logger.info(f"{nTotalStations2} observation sites remaining. {nObsDataRecords2} valid observational data records remaining.")
 
     dfq.sort_values(by = ['country','stationID', 'dClass', 'samplingHeight', 'productionTime'], inplace = True, ascending = [True, True, False, False, False])
-    #dfq.to_csv(sTmpPrfx+'_dbg_dfValidObs.csv', mode='w', sep=',')
+    dfq.to_csv(sTmpPrfx+'_dbg_dfValidObs.csv', mode='w', sep=',')
     dfqdd=dfq.drop_duplicates(['stationID', 'dClass', 'samplingHeight'], keep='first')  # discards older  'productionTime' datasets
     logger.info("Dropping duplicates and deprecated data sets that have been replaced with newer versions.")
     # But we are still keeping all sampling heights.
     sOutputPrfx=ymlContents[ 'run']['thisRun']['uniqueOutputPrefix']
+    #logger.debug(f'sTmpPrfx={sTmpPrfx}')
+
     tracer=hk.getTracer(ymlContents['run']['tracers'])
     fDiscoveredObservations=sOutputPrfx+"DiscoveredObservations-"+tracer+".csv"
     nObsDataRecords2 = len(dfqdd)

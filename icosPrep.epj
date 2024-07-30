@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project icosPrep",
     "copyright": "Copyright (C) 2024 Arndt Meier, koala.oso@gmail.com",
-    "saved": "2024-07-23, 23:19:17"
+    "saved": "2024-07-29, 17:45:11"
   },
   "project": {
     "AUTHOR": "Arndt Meier",
@@ -93,7 +93,8 @@
       "icosPrep/utils/logging.py",
       "icosPrep/utils/niceLogging.py",
       "icosPrep/utils/system.py",
-      "icosPrep/utils/units.py"
+      "icosPrep/utils/units.py",
+      "icosPrep/utils/ymlSmartLoader.py"
     ],
     "SOURCESDIR": "icosPrep",
     "SPELLEXCLUDES": "",

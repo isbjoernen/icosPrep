@@ -15,9 +15,11 @@ from loguru import logger
 try:
     from dataHunting.queryCarbonPortal import discoverObservationsOnCarbonPortal
     import utils.boringStuff as bs
+    from utils.ymlSmartLoader import smartLoadYmlFile
 except:
     from queryCarbonPortal import discoverObservationsOnCarbonPortal
     import boringStuff as bs
+    from ymlSmartLoader import smartLoadYmlFile
 
 global AVAIL_LAND_NETEX_DATA  # Land/vegetation net exchange model emissions that are supported
 AVAIL_LAND_NETEX_DATA=["LPJ-GUESS","VPRM"]
@@ -2128,8 +2130,11 @@ def  readMyYamlFile(ymlFile):
     '''
     ymlContents=None
     try:
-        with open(ymlFile, 'r') as file:
-            ymlContents = yaml.safe_load(file)
+        ymlContents=smartLoadYmlFile(ymlFile)
+        if(ymlContents is None):
+            sys.exit(-96)
+        #with open(ymlFile, 'r') as file:
+        #    ymlContents = yaml.safe_load(file)
     except:
         logger.error(f"Abort! Unable to read yaml configuration file {ymlFile} - failed to read its contents with yaml.safe_load()")
         readFailed=True

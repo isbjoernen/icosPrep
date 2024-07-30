@@ -22,6 +22,10 @@ from datetime import datetime
 from dateutil.parser import parse
 from pandas import  Timestamp  
 from loguru import logger
+try:
+    from utils.ymlSmartLoader import smartLoadYmlFile
+except:
+    from ymlSmartLoader import smartLoadYmlFile
 
 
 def caclulateSha256Filehash(myfile):
@@ -547,8 +551,11 @@ def readYmlCfgFile(ymlFile):
         # Read the yaml configuration file
         tryAgain=False
         try:
-            with open(ymlFile, 'r') as file:
-                ymlContents = yaml.safe_load(file)
+            ymlContents=smartLoadYmlFile(ymlFile)
+            if(ymlContents is None):
+                sys.exit(-96)
+            #with open(ymlFile, 'r') as file:
+            #    ymlContents = yaml.safe_load(file)
             # Create a backup ymlFile in case something goofs up or if the user cancels the run so we can revert back.
             sCmd="cp "+ymlFile+' '+ymlFile+'.bac' # create a backup file.
             os.system(sCmd)

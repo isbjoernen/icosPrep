@@ -9,7 +9,12 @@ import yaml
 from loguru import logger
 
 #from dataclasses import dataclass, field
-from utils.gridutils import Grid #, grid_from_rc
+try:
+    from utils.gridutils import Grid #, grid_from_rc
+    from utils.ymlSmartLoader import smartLoadYmlFile
+except:
+    from gridutils import Grid #, grid_from_rc
+    from ymlSmartLoader import smartLoadYmlFile
 
 try:
     import dataPrep.readLv3NcFileFromCarbonPortal as fromICP # !
@@ -40,20 +45,25 @@ def  readMyYamlFile(ymlFile):
     @type yamlObject
     '''
     ymlContents=None
+    tryBkpFile=False
     try:
-        with open(ymlFile, 'r') as file:
-            ymlContents = yaml.safe_load(file)
+        ymlContents=smartLoadYmlFile(ymlFile)
+        if(ymlContents is None):
+            tryBkpFile=True
+        #with open(ymlFile, 'r') as file:
+        #    ymlContents = yaml.safe_load(file)
     except:
+        tryBkpFile=True
+    if(tryBkpFile):
         sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
         os.system(sCmd)
         try:
-            with open(ymlFile, 'r') as file:
-                ymlContents = yaml.safe_load(file)
-            #sCmd="cp "+ymlFile+' '+ymlFile+'.bac' # This is now already done in housekeeping.py, which is more consistent
-            #os.system(sCmd)
+            ymlContents=smartLoadYmlFile(ymlFile)
         except:
-            logger.error(f"Abort! Unable to read yaml configuration file {ymlFile} - failed to read its contents with yaml.safe_load()")
-            sys.exit(1)
+            ymlContents=None
+    if(ymlContents is None):
+        logger.error(f"Abort! Unable to read the yaml configuration file {ymlFile} provided to icosPrep via the --ymf commandline option.")
+        sys.exit(1)
     return(ymlContents)
 
 
@@ -65,6 +75,29 @@ def prepData(ymlFile, myMachine= 'UNKNOWN'):
     sOutputPrfx=ymlContents['run']['thisRun']['uniqueOutputPrefix'] 
     sTmpPrfx=ymlContents['run']['thisRun']['uniqueTmpPrefix'] 
     sOutPath=ymlContents['run']['paths']['output']
+    cwd = os.getcwd()
+    logger.info(f'Current working directory is {cwd}')
+    logger.info(f'run.paths.output is {sOutPath}')
+    if not(os.path.isdir(sOutPath)):
+        try:
+            os.makedirs(sOutPath)
+        except:
+            sCmd=("mkdir -p "+str(sOutPath))
+            try:
+                os.system(sCmd)
+            except:
+                sys.exit(f'Abort. Failed to create user-requested output directory {sOutPath}. Please check the key run.paths.output in your {ymlFile} file as well as your write permissions.')
+    sTmpPath=ymlContents['run']['paths']['temp']
+    logger.info(f'run.paths.rmp is {sTmpPath}')
+    if not(os.path.isdir(sTmpPath)):
+        try:
+            os.makedirs(sTmpPath)
+        except:
+            sCmd=("mkdir -p "+str(sTmpPath))
+            try:
+                os.system(sCmd)
+            except:
+                sys.exit(f'Abort. Failed to create user-requested output directory {sTmpPath}. Please check the key run.paths.temp in your {ymlFile} file as well as your write permissions.')
 
     # get tracer
     tracer=hk.getTracer(ymlContents['run']['tracers'])
