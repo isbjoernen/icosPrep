@@ -5,6 +5,10 @@ import sys
 import argparse
 from pathlib import Path
 from loguru import logger
+try:
+    import utils.housekeeping as hk
+except:
+    import housekeeping as hk
 #from dataHunting.dataHunter import prepareCallToLumiaGUI
 
 # icosPrepInstallDir=path.dirname(__file__)
@@ -63,7 +67,11 @@ def main():
     script_directory=Path(icosPrepInstallDir)
     packageRootDir=script_directory.parent  # where .git directory lives.....
     sCmd=sCmd+' --rootDir='+str(packageRootDir)
-    
+    thisScript=sys.argv[0] 
+    packageName='icosPrep' 
+    uniqueIdentifier=None
+    (ymlFile, oldDiscoveredObservations, myMachine, packageRootDir, uniqueIdentifier)=hk.documentThisRun(ymlFile, thisScript,  packageName,  packageRootDir, uniqueIdentifier, args)  # from housekeepimg.py    
+    sCmd=sCmd+' --uid='+uniqueIdentifier
     # Call the main data hunting method
     #ymlFile=prepareCallToLumiaGUI(ymlFile,  USE_TKINTER,  packageRootDir,  args)
     try:

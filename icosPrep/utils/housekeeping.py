@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-LATESTGITCOMMIT_icosPrep='e3550ed05acd3afefe8ff38b650cd07dbc43941b'
+LATESTGITCOMMIT_icosPrep='652017d1497d3b448bdaf676acda6551fc6d40fd'
 LATESTGITCOMMIT_LumiaMaster='186409332c94be3cb2c5cafe8edb578b166e11d3'
 LATESTGITCOMMIT_masterPlus='2fc00b3f9600af4cccacd7da5ce2aa6e31f01bc4'
 LATESTGITCOMMIT_LumiaDA='09957785de81f6653ca62b3cd735d114b0c660f3'
@@ -8,7 +8,8 @@ LATESTGITCOMMIT_Runflex='9ef682d69e32fdfd1e1c23e742149c6268b8715a'
 
 import os
 import sys
-import subprocess
+#import subprocess
+from shutil import copy2
 import glob
 import getpass
 import platform
@@ -56,20 +57,22 @@ def configureOutputDirectories (ymlContents, ymlFile, lumiaFlavour, sNow, myMach
     if(len(sOutpDir)>0):
         # if the output directory already contains a subdirectory with a date, then we want to strip that lowest level and create our output at the same level with current date+time
         sOutpDir=stripDateLevelIfPresent(sOutpDir)
-        sCmd=("mkdir -p "+sOutpDir)
-    try:
-        os.system(sCmd)
-    except:
-        sys.exit(f'Abort. Failed to create user-requested output directory {sOutpDir}. Please check the key run.paths.output in your {ymlFile} file as well as your write permissions.')
+        if not (os.path.exists(sOutpDir)):
+            try:
+                Path(sOutpDir).mkdir(parents=True, exist_ok=True)
+            except:
+                logger.error('Abort. Unable to write log files. Unable to create requested output directory.')
+                sys.exit(f'Abort. Failed to create user-requested output directory {sOutpDir}. Please check the key run.paths.output in your {ymlFile} file as well as your write permissions.')
     sOutputPrfx=lumiaFlavour+'-'+sNow+os.path.sep+lumiaFlavour+'-'+sNow +'-'
     sTmpPrfx=sOutputPrfx # same structure below the Temp and Output directories
     if ((len(sOutpDir)>0) and (sOutpDir[-1]!=os.path.sep)):
         sOutpDir=sOutpDir+os.path.sep
-    sCmd=("mkdir -p "+sOutpDir+lumiaFlavour+'-'+sNow)
+    s=str(sOutpDir)+lumiaFlavour+'-'+sNow
     try:
-        os.system(sCmd)
+        Path(s).mkdir(parents=True, exist_ok=True)
     except:
-        sys.exit(f'Abort. Failed to create user-requested output sub-directory {sOutpDir}LumiaDA-{sNow}. Please check the key run.paths.output in your {ymlFile} file as well as your write permissions.')
+        logger.error(f'Abort. Unable to write log files. Unable to create requested output directory {s}.')
+        sys.exit(f'Abort. Failed to create user-requested output sub-directory {s}. Please check the key run.paths.output in your {ymlFile} file as well as your write permissions.')
     sOutputPrfx=sOutpDir+sOutputPrfx
     try:
         sTmpDir=ymlContents['run']['paths']['temp']
@@ -81,20 +84,18 @@ def configureOutputDirectories (ymlContents, ymlFile, lumiaFlavour, sNow, myMach
         setKeyVal_Nested_CreateIfNecessary(ymlContents, [ 'run',  'paths',  'temp' ],   value=sTmpDir, bNewValue=True)
     if(len(sTmpDir)>0):
         sTmpDir=stripDateLevelIfPresent(sTmpDir)
-        sCmd=("mkdir -p "+sTmpDir)
-    try:
-        if not('LumiaGUI' in lumiaFlavour): # lumiaGUI only writes to the outputDir not the sTmpDir directory
-            os.system(sCmd)
-    except:
-        sys.exit(f'Abort. Failed to create user-requested temp directory {sTmpDir}. Please check the key run.paths.output in your {ymlFile} file as well as your write permissions.')
+        try:
+            Path(sTmpDir).mkdir(parents=True, exist_ok=True)
+        except:
+            sys.exit(f'Abort. Failed to create user-requested temp directory {sTmpDir}. Please check the key run.paths.temp in your {ymlFile} file as well as your write permissions.')
     if ((len(sTmpDir)>0) and (sTmpDir[-1]!=os.path.sep)):
         sTmpDir=sTmpDir+os.path.sep
-    sCmd=("mkdir -p "+sTmpDir+lumiaFlavour+'-'+sNow)
+    s=str(sTmpDir)+lumiaFlavour+'-'+sNow
     try:
         if not('LumiaGUI' in lumiaFlavour): # lumiaGUI only writes to the outputDir not the sTmpDir directory
-            os.system(sCmd)
+            Path(s).mkdir(parents=True, exist_ok=True)
     except:
-        sys.exit(f'Abort. Failed to create user-requested temp sub-directory {sTmpDir}LumiaDA-{sNow}. Please check the key run.paths.output in your {ymlFile} file as well as your write permissions.')
+        sys.exit(f'Abort. Failed to create user-requested temp sub-directory {s}. Please check the key run.paths.temp in your {ymlFile} file as well as your write permissions.')
     sTmpPrfx=sTmpDir+sTmpPrfx
     return(sOutputPrfx,  sTmpPrfx,  useMachine)
 
@@ -545,6 +546,46 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
     return(repoUrl, branch, sLocalGitRepos,   remoteCommitUrl , myCom, LATESTGITCOMMIT_icosPrep, packageRootDir)
 
 
+def  readMyYamlFile(ymlFile, tryBkpFile=True, createBkpFile=False ):
+    '''
+    Function readMyYamlFile
+
+    @param ymlFile : the LUMIA YAML configuration file in yaml (or rc) data format (formatted text)
+    @type string (file name)
+    @return contents of the ymlFile
+    @type yamlObject
+    '''
+    ymlContents=None
+    try:
+        ymlContents=smartLoadYmlFile(ymlFile)
+        if(ymlContents is None):
+            tryBkpFile=True
+    except:
+        tryBkpFile=True
+    if(tryBkpFile):
+        #sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
+        #os.system(sCmd)
+        src=str(ymlFile)+'.bac'
+        try:
+            copy2(src, ymlFile)
+        except:
+            pass
+        try:
+            ymlContents=smartLoadYmlFile(ymlFile)
+        except:
+            ymlContents=None
+    if(ymlContents is None):
+        logger.error(f"Abort! Unable to read the yaml configuration file {ymlFile} provided via the --ymf commandline option.")
+        sys.exit(1)
+    if(createBkpFile):
+        dest=str(ymlFile)+'.bac'
+        try:
+            copy2(ymlFile,  dest)
+        except:
+            pass
+    return(ymlContents)
+
+
 def readYmlCfgFile(ymlFile):
     ymlContents=None
     try:
@@ -663,7 +704,7 @@ def tryToCreateNewToken(ymlContents, myMachine):
         logger.warning('The key emissions.tokenGenerator is not defined in your yaml configuration file, so I cannot call it for you. You will have to create a valid token by your usual means before running LUMIA.')
         return  # user has to fix the token issue manually after the exception will be raised
     
-def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  packageRootDir=None, args=None, myMachine= 'UNKNOWN',  interactive=True):
+def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  packageRootDir=None,  uniqueIdentifier=None, args=None, myMachine= 'UNKNOWN',  interactive=True):
     # current version of the yml config files:
     nThisConfigFileVersion= int(6)
     nThisConfigFileSubVersion=int(3)
@@ -673,7 +714,7 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  p
         bPrepOnly=True # If some files are missing that are needed by Lumia but not by the prep program, then execution continues
         # if bPrepOnly is set to True. This eases preparation of the obs data on a machine different from the one doing the heavy lifting of Lumia.
     # Now read the yaml configuration file - whether altered by the GUI or not
-    ymlContents=readYmlCfgFile(ymlFile)
+    ymlContents=readMyYamlFile(ymlFile, tryBkpFile=True, createBkpFile=True )
 
     wrongOrMissingVersion=False
     nVers=0
@@ -720,7 +761,10 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  p
                 sys.exit(-4)
     # the unique identifer used in folder and file names is based on the date of time we run Lumia
     current_date = datetime.now()
-    sNow=current_date.isoformat("T","seconds") # sNow is the time stamp for all log files of a particular run
+    if(uniqueIdentifier is None):
+        sNow=current_date.isoformat("T","seconds") # sNow is the time stamp for all log files of a particular run
+    else:
+        sNow=uniqueIdentifier
     # colons from the time are not without problems in directory and file names. Better to play it safe and replace them with underscores
     sNow=re.sub(':', '_', sNow)
     sNow=sNow[:-3] # minutes is good enough....don't need seconds if a run takes hours...
@@ -795,7 +839,7 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  p
     log_level='INFO'
     if((args is not None)and(args.verbosity is not None)):
         log_level = args.verbosity
-    setupLogging(log_level,  sOutputPrfx)
+    setupLogging(log_level,  sOutputPrfx,  lumiaFlavour+'.log')
     logger.info(f'{args}')  # document how Lumia was called including commandline options
     
     # ### query Git - what version of Lumia are we running? ### #        
@@ -1112,7 +1156,7 @@ def documentThisRun(ymlFile,  parentScript='runLumia',  lumiaFlavour='Lumia',  p
         sys.exit(-10)
 
     logger.info(f'updated configuratrion yaml file written to {sNewYmlFileName}')
-    return(sNewYmlFileName, oldDiscoveredObservations, myMachine, packageRootDir)  # oldDiscoveredObservations is only used by LumiaGUI
+    return(sNewYmlFileName, oldDiscoveredObservations, myMachine, packageRootDir, ymlContents[ 'run']['thisRun']['uniqueIdentifierDateTime'])  # oldDiscoveredObservations is only used by LumiaGUI
 
 
 

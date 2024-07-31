@@ -2,7 +2,8 @@
 
 import os
 import sys
-from shutil import copy2
+#from shutil import copy2
+from pathlib import Path
 try:
     import utils.housekeeping as hk
 except:
@@ -93,7 +94,7 @@ def verifyYmlFile(ymlFile):
         sys.exit(-3)
     return(ymlFile)
 
-def prepareCallToLumiaGUI(ymlFile,  packageRootDir, args): 
+def prepareCallToLumiaGUI(ymlFile,  packageRootDir, args,  uniqueIdentifier=None): 
     '''
     Function 
     LumiaGUI exposes selected paramters of the LUMIA config file (in yaml data format) to a user
@@ -117,7 +118,7 @@ def prepareCallToLumiaGUI(ymlFile,  packageRootDir, args):
     # Do the housekeeping like documenting the current git commit version of this code, date, time, user, platform etc.
     thisScript=sys.argv[0] 
     packageName='icosPrep' 
-    (ymlFile, oldDiscoveredObservations, myMachine, packageRootDir)=hk.documentThisRun(initialYmlFile, thisScript,  packageName,  packageRootDir,  args)  # from housekeepimg.py
+    (ymlFile, oldDiscoveredObservations, myMachine, packageRootDir, uniqueIdentifier)=hk.documentThisRun(initialYmlFile, thisScript,  packageName,  packageRootDir, uniqueIdentifier,  args) 
     # Now the config.yml file has all the details for this particular run
 
     # remove old message files - these are only relevant if LumiaGUI is used in an automated workflow as they signal
@@ -139,7 +140,7 @@ def prepareCallToLumiaGUI(ymlFile,  packageRootDir, args):
         notify_output = wdg.Output()
         display(notify_output)
     # Read the yaml configuration file
-    ymlContents=readMyYamlFile(ymlFile, True)
+    ymlContents=hk.readMyYamlFile(ymlFile, tryBkpFile=True, createBkpFile=False )
     # All output is written into  subdirectories (defined by run.paths.output and run.paths.temp) followed by a directory level named 
     # after the run.thisRun.uniqueIdentifierDateTime key which is also what all subsequent output filenames are starting with.
     # see housekeeping.py for details
@@ -152,9 +153,9 @@ def prepareCallToLumiaGUI(ymlFile,  packageRootDir, args):
         sLogCfgPath="./"
     else:
         sLogCfgPath=ymlContents['run']['paths']['output']+"/"
-        sCmd=("mkdir -p "+ymlContents['run']['paths']['output'])
+        #sCmd=("mkdir -p "+ymlContents['run']['paths']['output'])
         try:
-            os.system(sCmd)
+            Path(ymlContents['run']['paths']['output']).mkdir(parents=True, exist_ok=True)
         except:
             logger.error('Abort. Unable to write log files. Unable to create requested output directory.')
     
@@ -2119,83 +2120,13 @@ class lumiaGuiApp:
         #self.ColLabels.grid(row=4, column=0, columnspan=10, padx=2, pady=yPadding, sticky="nw")
         return True
 
-   
-def  readMyYamlFile(ymlFile, tryBkpFile=True):
-    '''
-    Function readMyYamlFile
-
-    @param ymlFile : the LUMIA YAML configuration file in yaml (or rc) data format (formatted text)
-    @type string (file name)
-    @return contents of the ymlFile
-    @type yamlObject
-    '''
-    ymlContents=None
-    try:
-        ymlContents=smartLoadYmlFile(ymlFile)
-        if(ymlContents is None):
-            tryBkpFile=True
-    except:
-        tryBkpFile=True
-    if(tryBkpFile):
-        #sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
-        #os.system(sCmd)
-        src=str(ymlFile)+'.bac'
-        try:
-            copy2(src, ymlFile)
-        except:
-            pass
-        try:
-            ymlContents=smartLoadYmlFile(ymlFile)
-        except:
-            ymlContents=None
-    if(ymlContents is None):
-        logger.error(f"Abort! Unable to read the yaml configuration file {ymlFile} provided to icosPrep via the --ymf commandline option.")
-        sys.exit(1)
-    return(ymlContents)
-
-
-def  oldReadMyYamlFile(ymlFile):
-    '''
-    Function readMyYamlFile
-
-    @param ymlFile : the LUMIA YAML configuration file in yaml (or rc) data format (formatted text)
-    @type string (file name)
-    @return contents of the ymlFile
-    @type yamlObject
-    '''
-    ymlContents=None
-    try:
-        ymlContents=smartLoadYmlFile(ymlFile)
-        if(ymlContents is None):
-            sys.exit(-96)
-        #with open(ymlFile, 'r') as file:
-        #    ymlContents = yaml.safe_load(file)
-    except:
-        logger.error(f"Abort! Unable to read yaml configuration file {ymlFile} - failed to read its contents with yaml.safe_load()")
-        readFailed=True
-        try:
-            sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
-            os.system(sCmd)
-            try:
-                with open(ymlFile, 'r') as file:
-                    ymlContents = yaml.safe_load(file)
-                #sCmd="cp "+ymlFile+' '+ymlFile+'.bac' # This is now already done in housekeeping.py, which is more consistent
-                #os.system(sCmd)
-                readFailed=False
-            except:
-                readFailed=True
-        except:
-            pass
-        if(readFailed):
-            sys.exit(1)
-    return(ymlContents)
-
 
 # def main():    
 p = argparse.ArgumentParser()
 p.add_argument('--start', dest='start', default=None, help="Start of the simulation in date+time ISO notation as in \'2018-08-31 00:18:00\'. Overwrites the value in the rc-file")
 p.add_argument('--end', dest='end', default=None, help="End of the simulation as in \'2018-12-31 23:59:59\'. Overwrites the value in the rc-file")
 p.add_argument('--ymf', dest='ymf', default=None,  help='yaml configuration file where the user plans his or her Lumia run: parameters, input files etc.')   
+p.add_argument('--uid', dest='uid', default=None,  help='uniqueIdentifier - only used when called as a subprocess frm icosPrep')   
 p.add_argument('--rootDir', dest='rootDir', default=None,  help='Root installation directory of the package (icosPrep, Lumia, LumiaGUI,..) that is calling this script')   
 p.add_argument('--noTkinter', '-n', action='store_true', default=False, help="Do not use tkinter (=> use ipywidgets)")
 p.add_argument('--verbosity', '-v', dest='verbosity', default='INFO')
@@ -2221,13 +2152,17 @@ if(args.ymf is None):
     ymlFile=None
 else:
     ymlFile = args.ymf
+if(args.uid is None):
+    uniqueIdentifier=None
+else:
+    uniqueIdentifier=args.uid
 if (args.rootDir is None):
     packageRootDir=None
 else:
     packageRootDir=str(args.rootDir)
 
 # Call the main method
-prepareCallToLumiaGUI(ymlFile, packageRootDir,  args)
+prepareCallToLumiaGUI(ymlFile, packageRootDir,  args, uniqueIdentifier)
 
 # e.g. 
 # python /home/cec-ami/nateko/dev/py/icosPrep/icosPrep/dataHunting/dataHunter.py  --verbosity=DEBUG 

@@ -2,25 +2,13 @@
 
 import os
 import sys
-from shutil import copy2
-import datetime
-from pandas import date_range
-from numpy import  ndarray,  unique # , linspace
-import yaml
+#from shutil import copy2
+from pathlib import Path
 from loguru import logger
-
-#from dataclasses import dataclass, field
 try:
-    from utils.gridutils import Grid #, grid_from_rc
     from utils.ymlSmartLoader import smartLoadYmlFile
 except:
-    from gridutils import Grid #, grid_from_rc
     from ymlSmartLoader import smartLoadYmlFile
-
-try:
-    import dataPrep.readLv3NcFileFromCarbonPortal as fromICP # !
-except:
-    import readLv3NcFileFromCarbonPortal as fromICP
 try:
     from  dataPrep.obsCPortalDb import obsdb
 except:
@@ -29,51 +17,12 @@ try:
     import utils.housekeeping as hk
 except:
     import housekeeping as hk
-try:    
-    from dataPrep import cdoWrapper
-except:
-    import cdoWrapper
-
-
-
-def  readMyYamlFile(ymlFile, tryBkpFile=True):
-    '''
-    Function readMyYamlFile
-
-    @param ymlFile : the LUMIA YAML configuration file in yaml (or rc) data format (formatted text)
-    @type string (file name)
-    @return contents of the ymlFile
-    @type yamlObject
-    '''
-    ymlContents=None
-    try:
-        ymlContents=smartLoadYmlFile(ymlFile)
-        if(ymlContents is None):
-            tryBkpFile=True
-    except:
-        tryBkpFile=True
-    if(tryBkpFile):
-        #sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
-        #os.system(sCmd)
-        src=str(ymlFile)+'.bac'
-        try:
-            copy2(src, ymlFile)
-        except:
-            pass
-        try:
-            ymlContents=smartLoadYmlFile(ymlFile)
-        except:
-            ymlContents=None
-    if(ymlContents is None):
-        logger.error(f"Abort! Unable to read the yaml configuration file {ymlFile} provided to icosPrep via the --ymf commandline option.")
-        sys.exit(1)
-    return(ymlContents)
 
 
 
 def prepData(ymlFile, myMachine= 'UNKNOWN', includeBackground=True):
     # Read the yaml configuration file
-    ymlContents=readMyYamlFile(ymlFile, False)
+    ymlContents=hk.readMyYamlFile(ymlFile, tryBkpFile=False, createBkpFile=False )
 
     # read yml config file
     sOutputPrfx=ymlContents['run']['thisRun']['uniqueOutputPrefix'] 
@@ -84,24 +33,16 @@ def prepData(ymlFile, myMachine= 'UNKNOWN', includeBackground=True):
     logger.info(f'run.paths.output is {sOutPath}')
     if not(os.path.isdir(sOutPath)):
         try:
-            os.makedirs(sOutPath)
+            Path(sOutPath).mkdir(parents=True, exist_ok=True)
         except:
-            sCmd=("mkdir -p "+str(sOutPath))
-            try:
-                os.system(sCmd)
-            except:
-                sys.exit(f'Abort. Failed to create user-requested output directory {sOutPath}. Please check the key run.paths.output in your {ymlFile} file as well as your write permissions.')
+            sys.exit(f'Abort. Failed to create user-requested output directory {sOutPath}. Please check the key run.paths.output in your {ymlFile} file as well as your write permissions.')
     sTmpPath=ymlContents['run']['paths']['temp']
     logger.info(f'run.paths.rmp is {sTmpPath}')
     if not(os.path.isdir(sTmpPath)):
         try:
-            os.makedirs(sTmpPath)
+            Path(sTmpPath).mkdir(parents=True, exist_ok=True)
         except:
-            sCmd=("mkdir -p "+str(sTmpPath))
-            try:
-                os.system(sCmd)
-            except:
-                sys.exit(f'Abort. Failed to create user-requested output directory {sTmpPath}. Please check the key run.paths.temp in your {ymlFile} file as well as your write permissions.')
+            sys.exit(f'Abort. Failed to create user-requested output directory {sTmpPath}. Please check the key run.paths.temp in your {ymlFile} file as well as your write permissions.')
 
     # get tracer
     tracer=hk.getTracer(ymlContents['run']['tracers'])

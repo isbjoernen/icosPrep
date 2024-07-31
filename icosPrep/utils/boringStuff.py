@@ -1,5 +1,6 @@
 import re
 import tkinter as tk 
+from shutil import copy2
 try:
     import housekeeping as hk
 except:
@@ -163,9 +164,17 @@ def cleanUp(self,  bWriteStop=True):  # of lumiaGuiApp
         ymlFile=self.initialYmlFile
         logger.info("LumiaGUI was canceled.")
         sCmd="touch icosPrep.stop"
-        hk.runSysCmd(sCmd)
-        sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
-        hk.runSysCmd(sCmd)
+        try:
+            hk.runSysCmd(sCmd)
+        except:
+            pass # may fail on jupyter Lab, but is without immediate consequence there, because the second step (prepData) is not being launched directly
+        src=str(ymlFile)+'.bac'
+        try:
+            copy2(src, ymlFile)
+        except:
+            pass
+        #sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
+        #hk.runSysCmd(sCmd)
         # Delete junk files that just clutter up the storage space
         junkFiles=[f'{self.sOutputPrfx}python-environment-pipLst.txt',  f'{self.sOutputPrfx}selected-ObsData-co2.csv', 
                           f'{self.sOutputPrfx}selected-PIDs-co2.csv',  f'{self.fDiscoveredObservations}', 
