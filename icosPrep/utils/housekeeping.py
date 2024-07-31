@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-LATESTGITCOMMIT_icosPrep='dd1f9b83218c2a7e346b644cc151a618e54cd018'
+LATESTGITCOMMIT_icosPrep='e3550ed05acd3afefe8ff38b650cd07dbc43941b'
 LATESTGITCOMMIT_LumiaMaster='186409332c94be3cb2c5cafe8edb578b166e11d3'
 LATESTGITCOMMIT_masterPlus='2fc00b3f9600af4cccacd7da5ce2aa6e31f01bc4'
 LATESTGITCOMMIT_LumiaDA='09957785de81f6653ca62b3cd735d114b0c660f3'
@@ -102,6 +102,7 @@ def configureOutputDirectories (ymlContents, ymlFile, lumiaFlavour, sNow, myMach
 def expandKeyValue(stringWithKeyReferencer,ymlContents,myMachine):
     # stringWithKeyReferencer contains something like ${run.paths.emissions} or even ${run.paths.data}/fluxes/nc/ 
     # or ${machine.footprints} that needs to be expanded to  machine.MYMACHINE.footprints where MYMACHINE could be cosmos, laptop, ....
+    # Note: Beware, there is one key that legitimately starts with a $ sign, namely grid : ${Grid:{lon0:-15, lat0:33, lon1:35, lat1:73, dlon:0.25, dlat:0.25}}
     n=0
     try:
         namedVariable, sep, tail = stringWithKeyReferencer[2:].partition('}')

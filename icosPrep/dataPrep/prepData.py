@@ -71,6 +71,7 @@ def  readMyYamlFile(ymlFile):
 def prepData(ymlFile, myMachine= 'UNKNOWN'):
     # Read the yaml configuration file
     ymlContents=readMyYamlFile(ymlFile)
+
     # read yml config file
     sOutputPrfx=ymlContents['run']['thisRun']['uniqueOutputPrefix'] 
     sTmpPrfx=ymlContents['run']['thisRun']['uniqueTmpPrefix'] 
@@ -123,7 +124,7 @@ def prepData(ymlFile, myMachine= 'UNKNOWN'):
     # sKeyword='LPJGUESS'
     logger.debug(f'Calling xrReader.Data.from_rc(rcf, start, end): start={start},  end={end}')
     import dataPrep.xrReader as xrReader
-    emis = xrReader.Data.from_rc(ymlFile,  ymlContents, start, end)
+    emis = xrReader.Data.from_rc(ymlFile,  ymlContents, start, end, myMachine)
     logger.info('emis data read.')
     # TODO: the df is for debugging only - remove later
     try:

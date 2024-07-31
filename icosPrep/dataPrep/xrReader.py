@@ -20,12 +20,16 @@ from typing import Iterator
 # # from icoscp.dobj import Dobj
 #from icoscp.cpb.dobj import Dobj
 #from gridtools import Grid
-from utils.gridutils import Grid
+from utils.gridutils import Grid,  str2grid
 import dataPrep.readLv3NcFileFromCarbonPortal as fromICP
 #from lumia.tracers import species, Unit
 from utils.tracers import species, Unit
 #from lumia.units import units_registry as ureg
 from utils.units import units_registry as ureg
+try:
+    import utils.housekeeping as hk
+except:
+    import housekeeping as hk
 #from rctools import RcFile
 # #from gridtools import grid_from_rc
 #from lumia.Tools.time_tools import periods_to_intervals
@@ -738,7 +742,7 @@ class Data:
         return em
 
     @classmethod
-    def from_rc(cls, ymf, ymlContents, start: Union[datetime, Timestamp, str], end: Union[datetime, str, Timestamp]) -> "Data":
+    def from_rc(cls, ymf, ymlContents, start: Union[datetime, Timestamp, str], end: Union[datetime, str, Timestamp],  myMachine='UKNOWN') -> "Data":
         """
         Create a Data structure from a rc-file, with the following keys defined:
         - tracers
@@ -754,21 +758,27 @@ class Data:
         emDataShape=None 
         # TODO: we need to loop through the tracers, not hard-wire co2
         tracers=ymlContents['run']['tracers']
+        tracerLst=[]
         if (isinstance(tracers, str)):
-            tracerLst=list(tracers)
+            tracerLst.append(tracers.lower())
         else:
             tracerLst=tracers
         #for tr in list(rcf.rcfGet('run.tracers')):
         for tr in tracerLst:
+            tr=tr.lower()
 
             # Create spatial grid - provided by minLat, maxLat, dLat, minLong, maxLong, dLong (e.g. Europe, quarter degree)
-            #grid = grid_from_rc(rcf, name=rcf.rcfGet(f'emissions.{tr}.region'))
-            # grid = rcf.rcfGet(f'emissions.{tr}.region')
             grid = ymlContents['emissions'][tr]['region']
+            while((grid[0]=='$') and (not ('lon0' in grid))):  #  Beware, grids may legitimately start with a $ sign, e.g. grid : ${Grid:{lon0:-15, lat0:33, lon1:35, lat1:73, dlon:0.25, dlat:0.25}}
+                grid=hk.expandKeyValue(grid ,ymlContents, myMachine)
+            grid=str2grid(grid)
 
             # Create temporal grid:
             #freq = rcf.rcfGet(f'emissions.{tr}.interval')  # get the time resolution requested in the rc file, key emissions.co2.interval, e.g. 1h
             freq = ymlContents['emissions'][tr]['interval']
+            while(freq[0]=='$'): 
+                freq=hk.expandKeyValue(freq ,ymlContents, myMachine)
+            
             timeRange = date_range(start, end, freq=freq, inclusive='left') # the time interval requested in the rc file
             logger.debug(f'TimeRange: start={start},  end={end},  freq={ freq},  timeRange={timeRange}')
 
@@ -817,10 +827,15 @@ class Data:
                     logger.error(f'Abort. No emissions file specified in your yaml config file for key emissions.{tr}.categories.{cat}.origin')
                     sys.exit(73)
                 #etp=rcf.rcfGet(f'emissions.{tr}.path')
-                etp=ymlContents['emissions'][tr]['path'](f'emissions.{tr}.path')
+                etp=ymlContents['emissions'][tr]['path']
+                while(etp[0]=='$'): 
+                    etp=hk.expandKeyValue(etp ,ymlContents, myMachine)
                 logger.debug(f"tr.path= {etp}")
                 #regionGrid=rcf.rcfGet(f'emissions.{tr}.region')
                 regionGrid=ymlContents['emissions'][tr]['region']
+                while((regionGrid[0]=='$') and (not ('lon0' in regionGrid))):  #  Beware, grids may legitimately start with a $ sign, e.g. grid : ${Grid:{lon0:-15, lat0:33, lon1:35, lat1:73, dlon:0.25, dlat:0.25}}
+                    regionGrid=hk.expandKeyValue(regionGrid ,ymlContents, myMachine)
+                regionGrid=str2grid(regionGrid)  # grid : ${Grid:{lon0:-15, lat0:33, lon1:35, lat1:73, dlon:0.25, dlat:0.25}}
                 # print(regionGrid,  flush=True)
                 sRegion="lon0=%.3f, lon1=%.3f, lat0=%.3f, lat1=%.3f, dlon=%.3f, dlat=%.3f, nlon=%d, nlat=%d"%(regionGrid.lon0, regionGrid.lon1,  regionGrid.lat0,  regionGrid.lat1,  regionGrid.dlon,  regionGrid.dlat,  regionGrid.nlon,  regionGrid.nlat)
                 logger.debug(f"tr.region= {sRegion}")
@@ -832,16 +847,25 @@ class Data:
                 # emis = load_preprocessed(prefix, start, end, freq=freq, archive=rcf.rcfGet(f'emissions.{tr}.path'),  grid=grid)
                 #myPath2FluxData1=rcf.rcfGet(f'emissions.{tr}.path')
                 myPath2FluxData1=ymlContents['emissions'][tr]['path']
+                while(myPath2FluxData1[0]=='$'): 
+                    myPath2FluxData1=hk.expandKeyValue(myPath2FluxData1 ,ymlContents, myMachine)
                 #myPath2FluxData3=rcf.rcfGet(f'emissions.{tr}.interval')
                 myPath2FluxData3=ymlContents['emissions'][tr]['interval']
+                while(myPath2FluxData3[0]=='$'): 
+                    myPath2FluxData3=hk.expandKeyValue(myPath2FluxData3 ,ymlContents, myMachine)
                 myPath2FluxData2=''
                 try:
                     #myPath2FluxData2=rcf.rcfGet(f'emissions.{tr}.regionName')
                     myPath2FluxData2=ymlContents['emissions'][tr]['regionName']
+                    while(myPath2FluxData2[0]=='$'): 
+                        myPath2FluxData2=hk.expandKeyValue(myPath2FluxData2 ,ymlContents, myMachine)
                 except:
                     logger.warning(f'Warning: No key emissions.{tr}.regionName found in user defined resource file (used in pathnames). I shall try to guess it...')
                     #mygrid=rcf.rcfGet(f'emissions.{tr}.region')
                     mygrid=ymlContents['emissions'][tr]['region']
+                    while((mygrid[0]=='$') and (not ('lon0' in mygrid))):  #  Beware, grids may legitimately start with a $ sign, e.g. grid : ${Grid:{lon0:-15, lat0:33, lon1:35, lat1:73, dlon:0.25, dlat:0.25}}
+                        mygrid=hk.expandKeyValue(mygrid ,ymlContents, myMachine)
+                    mygrid=str2grid(mygrid)
                     if((250==int(mygrid.dlat*1000)) and (250==int(mygrid.dlon*1000)) and (abs((0.5*(mygrid.lat0+mygrid.lat1))-53)<mygrid.dlat)and (abs((0.5*(mygrid.lon0+mygrid.lon1))-10)<mygrid.dlon)):
                         myPath2FluxData2='eurocom025x025' # It is highly likely that the region is centered in Europe and has a lat/lon grid of a quarter degree
                     else:
@@ -866,7 +890,7 @@ class Data:
                 #sLocation=rcf.rcfGet(f'emissions.{tr}.location.{cat}')
                 sLocation=ymlContents['emissions'][tr]['location'][cat]
                 #catDatasetName=rcf.rcfGet(f'emissions.{tr}.categories.{cat}.origin')
-                catDatasetName=ymlContents['emissions'][tr][''][cat]['origin']
+                catDatasetName=ymlContents['emissions'][tr]['categories'][cat]['origin']
                 logger.debug(f'Time span: start={start},  end={end},  freq={ freq} ')
                 if ('CARBONPORTAL' in sLocation):
                     # we attempt to locate and read that flux information directly from the carbon portal - given that this code is executed on the carbon portal itself

@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project icosPrep",
     "copyright": "Copyright (C) 2024 Arndt Meier, koala.oso@gmail.com",
-    "saved": "2024-07-30, 11:34:21"
+    "saved": "2024-07-30, 22:50:59"
   },
   "project": {
     "AUTHOR": "Arndt Meier",
@@ -90,6 +90,7 @@
       "icosPrep/icosPrep.py",
       "icosPrep/utils/__init__.py",
       "icosPrep/utils/boringStuff.py",
+      "icosPrep/utils/gridutils.py",
       "icosPrep/utils/housekeeping.py",
       "icosPrep/utils/logging.py",
       "icosPrep/utils/niceLogging.py",

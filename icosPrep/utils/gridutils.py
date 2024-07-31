@@ -3,14 +3,15 @@
 from dataclasses import dataclass, field
 from numpy import  ndarray, linspace #,  unique
 from typing import List
-from loguru import logger
+#from loguru import logger
 #from cartopy.io import shapereader
 #from shapely.geometry import Point
 #from shapely.ops import unary_union
 #from typing import List, Union, Tuple
 #from shapely.prepared import prep
 #import xarray as xr
-from numpy.typing import NDArray
+#from numpy.typing import NDArray
+from numpy import pi,  zeros,  float64,  sin, diff,  arange
 
 
 
@@ -138,7 +139,6 @@ class Grid:
     def extent(self) -> List[float]:
         return [self.lon0, self.lon1, self.lat0, self.lat1]
 
-    '''
     def calc_area(self):
         dlon_rad = self.dlon * pi / 180.
         area = zeros((self.nlat+1, self.nlon), float64)
@@ -146,7 +146,6 @@ class Grid:
         for ilat, lat in enumerate(lats):
             area[ilat, :] = self.radius_earth**2 * dlon_rad * sin(lat)
         return diff(area, axis=0)
-    '''
 
 
     @property
@@ -172,27 +171,26 @@ class Grid:
 
 
 def grid_from_rc(ymlContents, name=None):
-    pfx1 = 'grid.' 
-    if name is not None :
-        pfx0 = f'grid.{name}.'
-    else :
-        pfx0 = pfx1
     try:
         lat0=ymlContents['run']['region']['lat0']  # 33.0
         lat1=ymlContents['run']['region']['lat1']   #73.0
         lon0=ymlContents['run']['region']['lon0']  # -15.0
         lon1=ymlContents['run']['region']['lon1']   #35.0
-        dlat=ymlContents['run']['region']['dlat']  # 0.25
-        dlon=ymlContents['run']['region']['dlon']  # 0.25
-        nlat=ymlContents['run']['region']['nlat']  # 0.25
-        nlon=ymlContents['run']['region']['nlon']  # 0.25
     except:
         lat0=float(33.0)
         lat1=float(73.0)
         lon0=float(-15.0)
         lon1=float(35.0)
+    try:
+        dlat=ymlContents['run']['region']['dlat']  # 0.25
+        dlon=ymlContents['run']['region']['dlon']  # 0.25
+    except:
         dlat=float(0.25)
         dlon=float(0.25)
+    try:
+        nlat=ymlContents['run']['region']['nlat']  # 0.25
+        nlon=ymlContents['run']['region']['nlon']  # 0.25
+    except:
         nlat=int(160)
         nlon=int(200)
     #lon0 = rcf.rcfGet(f'{pfx0}lon0', default=rcf.rcfGet(f'{pfx1}lon0', default=None))
@@ -205,3 +203,46 @@ def grid_from_rc(ymlContents, name=None):
     #nlat = rcf.rcfGet(f'{pfx0}nlat', default=rcf.rcfGet(f'{pfx1}nlat', default=None))
     return Grid(lon0=lon0, lat0=lat0, lon1=lon1, lat1=lat1, dlon=dlon, dlat=dlat, nlon=nlon, nlat=nlat)
 
+
+def extractt(s, entries):
+    val=None
+    for entry in entries:
+        if (s in entry):
+            idx= entry.find(':')
+            try:
+                val=float(entry[idx+1:])
+                break
+            except:
+                pass
+    return(val)
+    
+def str2grid(gridStr) :
+    #   grid: ${Grid:{lon0:-15.000,lat0:33.000,lon1:35.000,lat1:73.000,dlon:0.25000, dlat:0.25000}}
+    idx = gridStr.find('lon0')    
+    s=gridStr[idx:-2]
+    entries=s.split(',')
+    flon0=extractt('lon0', entries)
+    flon1=extractt('lon1', entries)
+    flat0=extractt('lat0', entries)
+    flat1=extractt('lat1', entries)
+    fdlon=extractt('dlon', entries)
+    fdlat=extractt('dlat', entries)
+    if(flon0 is None):
+        flon0=float(-15.0)
+    if(flon1 is None):
+        flon1=float(35.0)
+    if(flat0 is None):
+        flat0=float(33.0)
+    if(flat1 is None):
+        flat1=float(73.0)
+    if(fdlon is None):
+        fdlon=float(0.25)
+    if(fdlat is None):
+        fdlat=float(0.25)
+    nlon=int(((flon1 - flon0)/fdlon) + 0.5)
+    nlat=int(((flat1 - flat0)/fdlon) + 0.5)
+    grid = Grid(lon0=flon0,  lon1=flon1, dlon=fdlon, nlon=nlon, lat0=flat0, lat1=flat1, dlat=fdlat, nlat=nlat)
+    return(grid)
+    
+    
+    
