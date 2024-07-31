@@ -1034,13 +1034,12 @@ def load_preprocessed(
             logger.info(f"Reading contents from flux file {fname}")
             em1Data=xr.load_dataarray(fname, engine="netcdf4", decode_times=True)
             logger.info(f"Success: xr.load_dataarray({fname}, engine=netcdf4, decode_times=True)")
-            # logger.debug(em1Data)
-            try:
-                df = em1Data.to_dataframe()
-                df.iloc[:1024, :].to_csv(f'_dbg_em1Data_{os.path.basename(fname)}_{cat}_{sKeyWord}_{sScndKeyWord}-XrL979.csv', mode='w', sep=',')  
-                #df.to_csv('em1Data.csv')
-            except:
-                logger.warning('in xr.py: df = em1Data.to_dataframe() failed')
+            # for debugging you could write the first 1000 lines ar so into a .csv file
+            #try:
+            #    df = em1Data.to_dataframe()
+            #    df.iloc[:1024, :].to_csv(f'_dbg_em1Data_{os.path.basename(fname)}_{cat}_{sKeyWord}_{sScndKeyWord}-XrL979.csv', mode='w', sep=',')  
+            #except:
+            #    logger.warning('in xr.py: df = em1Data.to_dataframe() failed')
             emData.append(em1Data)
             # data.append(xr.load_dataarray(fname, engine="netcdf4", decode_times=True))
         except:
@@ -1049,17 +1048,6 @@ def load_preprocessed(
     timeSel=slice(start, end)
     logger.debug(f'slice(start={slice}(start, end),  end={end}) = {timeSel}')
     emData = xr.concat(emData, dim='time').sel(time=slice(start, end))
-    #try:
-    #    # checking the emis file in small samples in human readable format
-    #    df = emData.to_dataframe()
-    #    df.iloc[:512, :].to_csv(f'_dbg_emData_{os.path.basename(fname)}_{cat}_{sKeyWord}_{sScndKeyWord}-4x512lines.csv', mode='w', sep=',')  
-    #    dStep=int(len(df)/3)
-    #    df.iloc[dStep:dStep+512, :].to_csv(f'_dbg_emData_{os.path.basename(fname)}_{cat}_{sKeyWord}_{sScndKeyWord}-4x512lines.csv', mode='a', sep=',')  
-    #    dStep+=dStep
-    #    df.iloc[dStep:dStep+512, :].to_csv(f'_dbg_emData_{os.path.basename(fname)}_{cat}_{sKeyWord}_{sScndKeyWord}-4x512lines.csv', mode='a', sep=',')  
-    #    df.iloc[-512:, :].to_csv(f'_dbg_emData_{os.path.basename(fname)}_{cat}_{sKeyWord}_{sScndKeyWord}-4x512lines.csv', mode='a', sep=',')  
-    #except:
-    #    pass
     
     # Resample if needed
     if freq is not None :
@@ -1083,19 +1071,11 @@ def load_preprocessed(
 
 
 # Interfaces:
-def WriteStruct(data: Data, path: str, prefix=None, zlib=False, complevel=1, only_transported=False):
-    if prefix is None :
-        # writes *-emissions.nc files
-        filename, path = path, os.path.dirname(path)
-        #logger.debug(f'xr.WriteStruct() L997 prefix is None,  filename={filename},  path={path}')
-    else :
-        filename = os.path.join(path, f'{prefix}.nc')
-    logger.debug(f'xr.WriteStruct() L1034 filename={filename} (calls data.to_netcdf())')
-    Path(path).mkdir(exist_ok=True, parents=True)
-    logger.debug(f'filename={filename}',  flush=True)
-    data.to_netcdf(filename, zlib=zlib, complevel=complevel, only_transported=only_transported) # This calls
+def WriteStruct(data: Data, fName: str, zlib=False, complevel=1, only_transported=False):
+    logger.debug(f'Writing emissions data to file {fName}',  flush=True)
+    data.to_netcdf(fName, zlib=zlib, complevel=complevel, only_transported=only_transported) # This calls
     # the xr.Data.to_netcdf() method as opposed to a pandas method or the xr.TracerEmis.to_netcdf() method
-    return filename
+    return fName
 
 
 def ReadStruct(path, prefix=None, categories=None):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from os import path, system
+from os import path, system,  remove
 import sys
 import argparse
 from pathlib import Path
@@ -17,6 +17,7 @@ def main():
     p.add_argument('--ymf', dest='ymf', default=None,  help='Required. Yaml configuration file where the user configues his or her Lumia run: parameters, input files etc.')   
     p.add_argument('--step1', action='store_true', default=False, help="Only run the first step, the dataHunter")
     p.add_argument('--step2', action='store_true', default=False, help="Only run the second step, the data preparation")
+    p.add_argument('--noBackground', action='store_true', default=False, help="Do not attempt to add background concentrations to the observational data")
     p.add_argument('--noTkinter', '-n', action='store_true', default=False, help="Do not use tkinter (=> use ipywidgets)")
     p.add_argument('--verbosity', '-v', dest='verbosity', default='INFO')
     args, unknown = p.parse_known_args(sys.argv[1:])
@@ -27,6 +28,10 @@ def main():
     logger.add(sys.stderr, level=args.verbosity)
     icosPrepInstallDir=path.dirname(__file__)   
     sCmd='python '+str(icosPrepInstallDir)+'/dataHunting/dataHunter.py '
+    if(path.isfile("icosPrep.stop")):
+        remove('icosPrep.stop') # sCmd="rm icosPrep.stop" #hk.runSysCmd(sCmd,  ignoreError=True)
+    if(path.isfile("icosPrep.go")):
+        remove('icosPrep.go') # sCmd="rm icosPrep.go" #hk.runSysCmd(sCmd,  ignoreError=True)
     
     '''
     USE_TKINTER=False # when called from lumiaGUInotebook.ipynb there are no commandline options
@@ -50,6 +55,10 @@ def main():
         sCmd=sCmd+' --start='+str(args.start)
     if not(args.end is None):
         sCmd=sCmd+' --end='+str(args.end)
+    if(args.noBackground):
+        includeBackground=False
+    else:
+        includeBackground=True
         
     script_directory=Path(icosPrepInstallDir)
     packageRootDir=script_directory.parent  # where .git directory lives.....
@@ -72,8 +81,8 @@ def main():
     #print(f'sha256 value of background_2019.nc is: {sv}')
             
     from dataPrep.prepData import prepData
-    # The ymlFile has been updated or execution has been aborted before getting to this point in the script....
-    prepData(ymlFile, myMachine)
+    prepData(ymlFile, myMachine,  includeBackground)
+    logger.info('Done. icosPrep completed successfully.')
     
 if __name__ == "__main__":
     main()

@@ -2,6 +2,7 @@
 
 import os
 import sys
+from shutil import copy2
 try:
     import utils.housekeeping as hk
 except:
@@ -138,7 +139,7 @@ def prepareCallToLumiaGUI(ymlFile,  packageRootDir, args):
         notify_output = wdg.Output()
         display(notify_output)
     # Read the yaml configuration file
-    ymlContents=readMyYamlFile(ymlFile)
+    ymlContents=readMyYamlFile(ymlFile, True)
     # All output is written into  subdirectories (defined by run.paths.output and run.paths.temp) followed by a directory level named 
     # after the run.thisRun.uniqueIdentifierDateTime key which is also what all subsequent output filenames are starting with.
     # see housekeeping.py for details
@@ -1762,7 +1763,7 @@ class lumiaGuiApp:
             self.closeApp
             return
         self.closeApp(bWriteStop=False)
-        sCmd="touch LumiaGui.go"
+        sCmd="touch icosPrep.go"
         hk.runSysCmd(sCmd)
         logger.info("Done. LumiaGui completed successfully. Config and Log file written.")
         # self.bPleaseCloseTheGui.set(True)
@@ -1783,7 +1784,7 @@ class lumiaGuiApp:
         # ====================================================================
         # body & brain of second GUI page  -- part of lumiaGuiApp (root window)
         # ====================================================================
-        if(os.path.isfile("LumiaGui.stop")):
+        if(os.path.isfile("icosPrep.stop")):
             sys.exit(-1)
         # The obsData from the Carbon Portal is already known at this stage. This was done before the toplevel window was closed
 
@@ -2117,9 +2118,43 @@ class lumiaGuiApp:
         ge.guiPlaceWidget(self.wdgGrid, self.ColLabels, row=4, column=0, columnspan=nCols,padx=xPadding, pady=yPadding, sticky="ew")
         #self.ColLabels.grid(row=4, column=0, columnspan=10, padx=2, pady=yPadding, sticky="nw")
         return True
-   
 
-def  readMyYamlFile(ymlFile):
+   
+def  readMyYamlFile(ymlFile, tryBkpFile=True):
+    '''
+    Function readMyYamlFile
+
+    @param ymlFile : the LUMIA YAML configuration file in yaml (or rc) data format (formatted text)
+    @type string (file name)
+    @return contents of the ymlFile
+    @type yamlObject
+    '''
+    ymlContents=None
+    try:
+        ymlContents=smartLoadYmlFile(ymlFile)
+        if(ymlContents is None):
+            tryBkpFile=True
+    except:
+        tryBkpFile=True
+    if(tryBkpFile):
+        #sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
+        #os.system(sCmd)
+        src=str(ymlFile)+'.bac'
+        try:
+            copy2(src, ymlFile)
+        except:
+            pass
+        try:
+            ymlContents=smartLoadYmlFile(ymlFile)
+        except:
+            ymlContents=None
+    if(ymlContents is None):
+        logger.error(f"Abort! Unable to read the yaml configuration file {ymlFile} provided to icosPrep via the --ymf commandline option.")
+        sys.exit(1)
+    return(ymlContents)
+
+
+def  oldReadMyYamlFile(ymlFile):
     '''
     Function readMyYamlFile
 

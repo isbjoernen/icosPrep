@@ -84,7 +84,7 @@ class obsdb(obsdb):
         return db
  
  
-    def load_fromCPortal(self, ymlContents=None, ymlFile: str=None) -> "obsdb":
+    def load_fromCPortal(self, ymlContents=None, ymlFile: str=None,  includeBackground=True) -> "obsdb":
         """
         Public method  load_fromCPortal
 
@@ -94,37 +94,40 @@ class obsdb(obsdb):
         Description: 1st step: Read all dry mole fraction files from all available records on the carbon portal
          - these obviously have no background co2 concentration values (which need to be provided by other means)
         """
-        (self, obsDf,  obsFile)=self.gatherObs_fromCPortal(ymlContents, ymlFile)
+        (self, obsDf)=self.gatherObs_fromCPortal(ymlContents, ymlFile)
         # all matching data was written to the obsFile
-        
-        # Read the file(s) or pattern that has the background co2 concentrations
         tracer=hk.getTracer(ymlContents['run']['tracers'])
-        bgFnameLst=[]
-        try:
-            bgFnameEntry=self.ymlContents['background']['concentrations'][tracer]['backgroundFiles']
-        except:
+        sOutputPrfx=ymlContents['run']['thisRun']['uniqueOutputPrefix'] 
+        obsFile=sOutputPrfx+'obsData-'+str(tracer)+'-NoBkgnd.csv' 
+        obsDf.to_csv(obsFile, encoding='utf-8', mode='w', sep=',')
+        if(includeBackground):
+            # Read the file(s) or pattern that has the background co2 concentrations
+            bgFnameLst=[]
             try:
-                bgFnameEntry=self.ymlContents['background']['concentrations'][tracer]['backgroundFile']
+                bgFnameEntry=self.ymlContents['background']['concentrations'][tracer]['backgroundFiles']
             except:
                 try:
-                    bgFnameEntry=self.ymlContents['background']['concentrations'][tracer]['backgroundCo2File']
+                    bgFnameEntry=self.ymlContents['background']['concentrations'][tracer]['backgroundFile']
                 except:
-                    logger.error(f'Unable to read background concentrations entries from yaml config file key background.concentrations.{tracer}.backgroundFile/s/backgroundCo2File. ')
-        if (isinstance(bgFnameEntry, str)):
-            if('*' in bgFnameEntry):
-                bgFnameLst = glob.glob(bgFnameEntry)
+                    try:
+                        bgFnameEntry=self.ymlContents['background']['concentrations'][tracer]['backgroundCo2File']
+                    except:
+                        logger.error(f'Unable to read background concentrations entries from yaml config file key background.concentrations.{tracer}.backgroundFile/s/backgroundCo2File. ')
+            if (isinstance(bgFnameEntry, str)):
+                if('*' in bgFnameEntry):
+                    bgFnameLst = glob.glob(bgFnameEntry)
+                else:
+                    bgFnameLst.append(bgFnameEntry)
             else:
-                bgFnameLst.append(bgFnameEntry)
-        else:
-            bgFnameLst =bgFnameEntry
-        for bgFname in bgFnameLst:
-            (bgDf, bInterpolationRequired)=self.load_background(bgFname)
-        # Now we have to merge the background CO2 concentrations into the observational data...
-        (mergedDf)=self.combineObsAndBgnd(obsDf,  bgDf,  bInterpolationRequired)
-        setattr(self,'observations', mergedDf)
-        self.filename = bgFname 
-        logger.info("Observed and background concentrations of CO2 have been read and merged successfully.")
-        # Then we should be able to continue as usual...i.e. like in the case of reading a prepared local obs+background data set.
+                bgFnameLst =bgFnameEntry
+            for bgFname in bgFnameLst:
+                (bgDf, bInterpolationRequired)=self.load_background(bgFname)
+            # Now we have to merge the background CO2 concentrations into the observational data...
+            (mergedDf)=self.combineObsAndBgnd(obsDf,  bgDf,  bInterpolationRequired)
+            setattr(self,'observations', mergedDf)
+            self.filename = bgFname 
+            logger.info("Observed and background concentrations of CO2 have been read and merged successfully.")
+            # Then we should be able to continue as usual...i.e. like in the case of reading a prepared local obs+background data set.
         logger.debug('load_fromCPortal() completed successfully.')
         return(self)
         
@@ -459,10 +462,10 @@ class obsdb(obsdb):
             setattr(self, 'sites', allSitesDfs)
             sTmpPrfx=self.ymlContents[ 'run']['thisRun']['uniqueTmpPrefix']
             logger.debug(f'sTmpPrfx={sTmpPrfx}')
-            allObsDfs.to_csv(sTmpPrfx+'_dbg_obsData-NoBkgnd.csv', encoding='utf-8', mode='w', sep=',')
+            # allObsDfs.to_csv(sTmpPrfx+'_dbg_obsData-NoBkgnd.csv', encoding='utf-8', mode='w', sep=',') # is written to sOutputPrfx in calling function
             allSitesDfs.to_csv(sTmpPrfx+'_dbg_mySitesWithUsableData.csv', encoding='utf-8', sep=',', mode='w')
-            logger.debug(f'gatherObs_fromCPortal() completed successfully. Returning allObsDfs and {sTmpPrfx}_dbg_obsData-NoBkgnd.csv')
-            return(self,  allObsDfs,  sTmpPrfx+'_dbg_obsData-NoBkgnd.csv')
+            logger.debug('gatherObs_fromCPortal() completed successfully. Returning allObsDfs')
+            return(self,  allObsDfs)
         else:
             logger.error('No usable observational data could be read from the carbon portal. Please review your choices on locations, time etc. and make sure you have proper file access.')
             sys.exit(-62)
@@ -493,6 +496,7 @@ class obsdb(obsdb):
         # https://stackoverflow.com/questions/74550482/pandas-interpolate-within-a-groupby-for-one-column
         # we do want 'left' here as opposed to 'inner'
         """
+        '''
         print("bgDf=",  flush=True)
         print(bgDf,  flush=True)
         print("bgDf.info()=",  flush=True)
@@ -501,11 +505,12 @@ class obsdb(obsdb):
         print("obsDf.index=",  flush=True)
         print(obsDf.index,  flush=True)
         obsDf.info() # is a timezone-naive datetime[64] data type
+        '''
         obsDf.reset_index(inplace=True)  # .set_index('level_1') # .drop('time',axis=1)   
         print(obsDf.columns,  flush=True)
-        print("obsDf.index=",  flush=True)
-        print(obsDf.index,  flush=True)
-        obsDf.info() # is a timezone-naive datetime[64] data type
+        #print("obsDf.index=",  flush=True)
+        #print(obsDf.index,  flush=True)
+        #obsDf.info() # is a timezone-naive datetime[64] data type
         sTmpPrfx=self.ymlContents[ 'run']['thisRun']['uniqueTmpPrefix']
         sOutputPrfx=self.ymlContents[ 'run']['thisRun']['uniqueOutputPrefix']
         logger.debug(f'sTmpPrfx={sTmpPrfx}')
@@ -572,6 +577,7 @@ class obsdb(obsdb):
         dfGoodBgValuesOnly=obsDfWthBg.dropna(subset=['background'])
         nRemaining=len(dfGoodBgValuesOnly)
         nDroppedBgRows=nTotal - nRemaining - nDroppedObsRows
+        tracer=hk.getTracer(self.ymlContents['run']['tracers'])
         if(nDroppedBgRows > 0):
             whatToDo= 'DAILYMEAN' # 'DAILYMEAN' # self.ymlContents('background.concentrations.co2.stationWithoutBackgroundConcentration')
             if(whatToDo=='DAILYMEAN'):
@@ -584,7 +590,7 @@ class obsdb(obsdb):
                 obsDfWthBg['date'] = to_datetime(obsDfWthBg['time']).dt.date
                 # now we are sure we are dealing with datetime objects as opposed to int64 time values in seconds since a reference date.
                 df = obsDfWthBg.merge(dfDailyMeans,  how='left', on=['date'], indicator=True)
-                # df.to_csv('/home/cec-ami/nateko/data/icos/DICE/mergeBackgroundCO2Test/dfFinalObsDfWthBg.csv', encoding='utf-8', mode='w', sep=',')
+                # df.to_csv('/home/cec-ami/nateko/data/icos/DICE/mergeBackgroundCO2Test/obsData-co2-NoBkgd.csv', encoding='utf-8', mode='w', sep=',')
                 # Now we have a termporal df that contains in an additional column the daily mean background values for all observations
                 
                 # obsDfWthBg["dMeanBg"]=obsDfWthBg[['date','background']].groupby(['date']).merge(dfDailyMeans,  how='left', on=['date', 'dMeanBg'])
@@ -596,8 +602,7 @@ class obsdb(obsdb):
                 logger.info(f"Filled {nDroppedBgRows} rows with daily-mean values of the background co2 concentration across all valid sites. {nRemaining} good rows are remaining")
             elif(whatToDo=='FIXED'):
                 # replace background CO2 concentration values that are missing with the fixed user-provided estimate of the background co2 concentrations
-                try:
-                    tracer=hk.getTracer(self.ymlContents['run']['tracers'])
+                try:                    
                     self.ymlContents['background']['concentrations'][tracer]['userProvidedBackgroundConcentration']
                 except:
                     EstimatedBgConcentration=410.0 
@@ -634,9 +639,9 @@ class obsdb(obsdb):
         obsDfWthBg['lon'] = obsDfWthBg['lon'].map(lambda x: '%8.4f' % x)
         obsDfWthBg['alt'] = obsDfWthBg['alt'].map(lambda x: '%6.1f' % x)
         obsDfWthBg['height'] = obsDfWthBg['height'].map(lambda x: '%6.1f' % x)
-        obsDfWthBg.to_csv(sOutputPrfx+'finalObsDfWthBg.csv', encoding='utf-8', mode='w', sep=',', float_format="%.5f")
+        obsDfWthBg.to_csv(sOutputPrfx+'obsData-'+str(tracer)+'-withBkgd.csv', encoding='utf-8', mode='w', sep=',', float_format="%.5f")
         # setattr('observations', newDf)
-        logger.debug('combineObsAndBgnd() completed successfully. Returning finalObsDfWthBg.csv')
+        logger.debug(f'combineObsAndBgnd() completed successfully. Returning obsData-{tracer}-withBkgd.csv')
         return(obsDfWthBg)
     """
         #  How do we handle any missing information on background concentrations where interpolation was not a sensible option:

@@ -2,6 +2,7 @@
 
 import os
 import sys
+from shutil import copy2
 import datetime
 from pandas import date_range
 from numpy import  ndarray,  unique # , linspace
@@ -35,7 +36,7 @@ except:
 
 
 
-def  readMyYamlFile(ymlFile):
+def  readMyYamlFile(ymlFile, tryBkpFile=True):
     '''
     Function readMyYamlFile
 
@@ -45,18 +46,20 @@ def  readMyYamlFile(ymlFile):
     @type yamlObject
     '''
     ymlContents=None
-    tryBkpFile=False
     try:
         ymlContents=smartLoadYmlFile(ymlFile)
         if(ymlContents is None):
             tryBkpFile=True
-        #with open(ymlFile, 'r') as file:
-        #    ymlContents = yaml.safe_load(file)
     except:
         tryBkpFile=True
     if(tryBkpFile):
-        sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
-        os.system(sCmd)
+        #sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
+        #os.system(sCmd)
+        src=str(ymlFile)+'.bac'
+        try:
+            copy2(src, ymlFile)
+        except:
+            pass
         try:
             ymlContents=smartLoadYmlFile(ymlFile)
         except:
@@ -68,9 +71,9 @@ def  readMyYamlFile(ymlFile):
 
 
 
-def prepData(ymlFile, myMachine= 'UNKNOWN'):
+def prepData(ymlFile, myMachine= 'UNKNOWN', includeBackground=True):
     # Read the yaml configuration file
-    ymlContents=readMyYamlFile(ymlFile)
+    ymlContents=readMyYamlFile(ymlFile, False)
 
     # read yml config file
     sOutputPrfx=ymlContents['run']['thisRun']['uniqueOutputPrefix'] 
@@ -126,16 +129,10 @@ def prepData(ymlFile, myMachine= 'UNKNOWN'):
     import dataPrep.xrReader as xrReader
     emis = xrReader.Data.from_rc(ymlFile,  ymlContents, start, end, myMachine)
     logger.info('emis data read.')
-    # TODO: the df is for debugging only - remove later
-    try:
-        df = emis.to_dataframe()
-        df.iloc[:512, :].to_csv('_dbg_emDataA_emissions_aPriori-XrL872.csv', mode='w', sep=',')
-        dStep=int(len(df)/3)
-        df.iloc[dStep:dStep+512, :].to_csv('_dbg_emDataB_emissions_aPriori-XrL872.csv', mode='w', sep=',')
-        dStep+=dStep
-        df.iloc[dStep:dStep+512, :].to_csv('_dbg_emDataC_emissions_aPriori-XrL872.csv', mode='w', sep=',')
-    except:
-        pass
     emis.print_summary()
+    fName=sOutputPrfx+'emissions-apriori.nc'
+    xrReader.WriteStruct(data=emis, fName=fName, zlib=False, complevel=1, only_transported=False)
+    logger.info(f'Apriori emissions written to file {fName}.')
+    
 
 

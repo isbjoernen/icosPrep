@@ -551,7 +551,7 @@ def chooseAmongDiscoveredObservations(bWithGui=True, tracer='CO2', ValidObs=None
             logger.error(f"Calling LumiaGUI failed. {returnValue} Execution stopped.")
             sys.exit(42)
         logger.info("LumiaGUI window closed")
-        if(os.path.isfile("LumiaGui.stop")):
+        if(os.path.isfile("icosPrep.stop")):
             logger.error("The user canceled the call of Lumia or something went wrong in the Refinement GUI. Execution aborted. Lumia was not called.")
             sys.exit(42)
         ValidObs.read_csv("Lumia-Refined-ObsData-"+sNow+".csv")

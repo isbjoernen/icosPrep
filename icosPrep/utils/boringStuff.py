@@ -158,11 +158,11 @@ def calculateEstheticFontSizes(sFontFamily,  iAvailWidth,  iAvailHght, sLongestT
 
 
 def cleanUp(self,  bWriteStop=True):  # of lumiaGuiApp
-    if(bWriteStop): # the user selected Cancel - else the LumiaGui.go message has already been written
+    if(bWriteStop): # the user selected Cancel - else the icosPrep.go message has already been written
         print('cleanUp: Removing junk.')
         ymlFile=self.initialYmlFile
         logger.info("LumiaGUI was canceled.")
-        sCmd="touch LumiaGui.stop"
+        sCmd="touch icosPrep.stop"
         hk.runSysCmd(sCmd)
         sCmd="cp "+ymlFile+'.bac '+ymlFile # recover from most recent backup file.
         hk.runSysCmd(sCmd)

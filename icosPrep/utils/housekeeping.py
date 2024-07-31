@@ -537,9 +537,9 @@ def   queryGitRepository(parentScript, lumiaFlavour, ymlContents, nThisConfigFil
     
     if(LATESTGITCOMMIT_icosPrep not in myCom):
         if('UNKNOWN' in myCom):
-            logger.info(f"\nWarning: Cannot verify whether the present version of lumiaGUI with git commit hash \nLATESTGITCOMMIT_icosPrep ({LATESTGITCOMMIT_icosPrep}) taken from said variable at the top of this \nlumia.GUI.housekeeping.py file is actually the latest version or not due to a missing local .git info tree.")
+            logger.info(f"\nWarning: Cannot verify whether the present version of lumiaGUI with git commit hash \nLATESTGITCOMMIT_icosPrep ({LATESTGITCOMMIT_icosPrep}) taken from said variable at the top of this \nhousekeeping.py file is actually the latest version or not due to a missing local .git info tree.")
         else:                
-            logger.warning(f"\nError: There is a mismatch between the current local or remote git commit hash ({myCom}) and \nthe LATESTGITCOMMIT_icosPrep ({LATESTGITCOMMIT_icosPrep}) variable at the top of this lumia.GUI.housekeeping.py file. \nPlease check if there is a newer version on github or whether you forgot to push your latest local commit to the remote github.\nHowever, it is a common chicken-and-egg problem that one can add the latest commit hash value to the source code after it was checked in.\nPlease consider resolving the conflict before proceeding.")
+            logger.warning(f"\nError: There is a mismatch between the current local or remote git commit hash ({myCom}) and \nthe LATESTGITCOMMIT_icosPrep ({LATESTGITCOMMIT_icosPrep}) variable at the top of this housekeeping.py file. \nPlease check if there is a newer version on github or whether you forgot to push your latest local commit to the remote github.\nHowever, it is a common chicken-and-egg problem that one can add the latest commit hash value to the source code after it was checked in.\nPlease consider resolving the conflict before proceeding.")
         #sys.exit(-5)
 
     return(repoUrl, branch, sLocalGitRepos,   remoteCommitUrl , myCom, LATESTGITCOMMIT_icosPrep, packageRootDir)
